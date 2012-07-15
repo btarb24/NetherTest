@@ -43,9 +43,7 @@ public class DbAccess
 		ResultSet rs = retrieveRecord(player);
 		
 		//get the last activity time
-		Calendar cal = Calendar.getInstance();
-		Timestamp dbTime = rs.getTimestamp(DB_TIME, cal);
-		cal.setTime(dbTime);
+		Calendar cal = getTimestampFromDb(rs);
 		
 		//add the max frequency to the last activity time
 		cal.add(Calendar.HOUR, NetherTest.ENTRANCE_FREQUENCY);
@@ -76,11 +74,11 @@ public class DbAccess
 			if (minutes > NetherTest.MAX_SESSION_LENGTH)
 			{
 				//calc how long until they can try again
-				int calcMin =  getMinuteDiff(cal, currentTime);
-				int calcHour = getHourDiff(cal, currentTime);
+				int calcMin =  60 - getMinuteDiff(cal, currentTime);
+				int calcHour = NetherTest.ENTRANCE_FREQUENCY - getHourDiff(cal, currentTime);
 				
 				//output the informational error message
-				player.sendMessage(String.format("You've exceeded the %s minute maximum per %s hours", NetherTest.MAX_SESSION_LENGTH, NetherTest.ENTRANCE_FREQUENCY));
+				player.sendMessage(String.format("You've exceeded the %d minute maximum per %d hours", NetherTest.MAX_SESSION_LENGTH, NetherTest.ENTRANCE_FREQUENCY));
 				player.sendMessage(String.format("Please wait %d hours %d minutes to try again", calcHour, calcMin) );
 				return false;
 			}
@@ -113,9 +111,7 @@ public class DbAccess
 			rs = retrieveRecord(player);
 
 			//get the last activity time
-			Calendar cal = Calendar.getInstance();
-			Timestamp dbTime = rs.getTimestamp(DB_TIME, cal);
-			cal.setTime(dbTime);
+			Calendar cal = getTimestampFromDb(rs);
 
 			//current time
 			Calendar currentTime = Calendar.getInstance(); 
@@ -152,6 +148,43 @@ public class DbAccess
 		}
 	}
 	
+	public void outputInfo(Player player)
+	{
+		ResultSet rs = null;
+		
+		try {
+			rs = retrieveRecord(player);
+
+			//get the last activity time
+			Calendar cal = getTimestampFromDb(rs);
+
+			//how many minutes were previously spent in nether
+			int previousMinutes = rs.getInt(DB_MINS);
+
+			//calc how long until they can try again
+			Calendar currentTime = Calendar.getInstance(); 
+			int calcMin =  60- getMinuteDiff(currentTime, cal);
+			int calcHour = NetherTest.ENTRANCE_FREQUENCY - getHourDiff(currentTime, cal);			
+			
+			player.sendMessage(String.format(
+					"You've used %d of your %d minutes within a %d hour period. Your minutes will refresh if you do not re-enter the nether for %d hours %d minutes.",
+					previousMinutes,
+					NetherTest.MAX_SESSION_LENGTH,
+					NetherTest.ENTRANCE_FREQUENCY,
+					calcHour,
+					calcMin));
+		} 
+		catch (SQLException e) {
+
+		}
+		
+		//cleanup //don't let it throw if we only have the exception on cleanup!
+		if (rs != null)
+		{
+			try { rs.close(); } catch (SQLException e) { }
+		}
+	}
+	
 	private ResultSet retrieveRecord(Player player) throws SQLException
 	{
 		//build query and execute it
@@ -173,6 +206,10 @@ public class DbAccess
 	
 	private int getHourDiff(Calendar future, Calendar now)
 	{
+		//sanity check
+		if (future.before(now))
+			return 0;
+		
 		//3,600,000 milliseconds in an hour
 		long hour = 3600000;
 		
@@ -187,7 +224,7 @@ public class DbAccess
 	}
 	
 	private int getMinuteDiff(Calendar future, Calendar now)
-	{
+	{	
 		//get total minutes different
 		int mins = getAbsoluteMinuteDiff(future, now);
 		
@@ -199,6 +236,10 @@ public class DbAccess
 	
 	private int getAbsoluteMinuteDiff(Calendar future, Calendar now)
 	{
+		//sanity check
+		if (future.before(now))
+			return 0;
+		
 		//60,000 milliseconds in a minute
 		long min = 60000;
 		
@@ -212,6 +253,20 @@ public class DbAccess
 		return dif;
 	}
 	
+	private Calendar getTimestampFromDb(ResultSet rs) throws SQLException
+	{
+		//prep a cal to use
+		Calendar cal = Calendar.getInstance();
+		
+		//get the val from db
+		Timestamp dbTime = rs.getTimestamp(DB_TIME, cal);
+		
+		//push it into the cal
+		cal.setTime(dbTime);
+		
+		return cal;
+	}
+	
 	private void updateTimestamp(ResultSet rs) throws SQLException
 	{
 		//get the current timestamp
@@ -223,8 +278,7 @@ public class DbAccess
 		//update it in the result set (doesn't push to db until you call update row)
 		rs.updateTimestamp(DB_TIME, ts);
 	}
-	
-	
+		
 	protected void finalize()
 	{
 		//close the connection to release it back to the pool

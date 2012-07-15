@@ -47,10 +47,7 @@ public class NetherTest extends JavaPlugin
 			return false;
 
 		if (args.length == 0)
-		{
-			//TODO: return usage
-			return false;
-		}
+			return false; //return usage
 
 		//the commands that have been coded are not valid for console access.. thus deny it
 		Player player = null;
@@ -64,7 +61,13 @@ public class NetherTest extends JavaPlugin
 		
 		if(command.equals("enter"))
 		{ //enter the nether world if permission is granted.
-
+			//make sure they're not already in the nether. ignore them if they're dumb
+			if (player.getWorld().getName().equals("world_nether"))
+			{
+				player.sendMessage("You're already in the Nether.");
+				return true;
+			}	
+			
 			try
 			{
 				if (! _dbAccess.canEnter(player))
@@ -92,6 +95,7 @@ public class NetherTest extends JavaPlugin
 		}
 		else if(command.equals("exit"))
 		{
+			//make sure we're in the nether before porting/db modification
 			if (player.getWorld().getName().equals("world_nether"))
 			{
 				player.teleport(Bukkit.getWorld("world").getSpawnLocation());
@@ -99,9 +103,16 @@ public class NetherTest extends JavaPlugin
 			}
 			else
 				player.sendMessage("You must be in the nether world to be able to exit it O.o");
+			
+			return true;
+		}
+		else if (command.equals("info"))
+		{//output how much time they have left and how long to wait
+			_dbAccess.outputInfo(player);
+			return true;
 		}
 		
-		//default fall through
+		//default fall through to print out the usage
 		return false; 
 	}
 }
