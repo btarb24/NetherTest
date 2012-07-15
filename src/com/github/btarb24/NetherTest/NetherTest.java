@@ -22,10 +22,11 @@ public class NetherTest extends JavaPlugin
 	//the max length of time a player may remain in the nether per session. measured in MINUTES
 	public static final int MAX_SESSION_LENGTH = 60;
 	
-	private DbAccess _dbAccess = new DbAccess();
+	private DbAccess _dbAccess = null;
 	
 	public void onLoad()
 	{ 
+		_dbAccess = new DbAccess(getLogger());
 		getLogger().info("NetherTest Loaded");
 	}
 	
@@ -56,36 +57,48 @@ public class NetherTest extends JavaPlugin
 		if (sender instanceof Player)
 			player = (Player) sender;
 		else
-			return false;
+			return true;
 		
 		//EVALUTE COMMANDS
-		if(args[0].equalsIgnoreCase("enter"))
+		String command = args[0].toLowerCase();
+		
+		if(command.equals("enter"))
 		{ //enter the nether world if permission is granted.
 
 			try
 			{
 				if (! _dbAccess.canEnter(player))
-					return false; //access denied. message to player already sent
+					return true; //access denied. message to player already sent
 			}
 			catch (SQLException e)
 			{ //exception occurred. consider it a failed attempt.  try once more before giving up
 				try
 				{
 					if (! _dbAccess.canEnter(player))
-						return false; //access denied. message to player already sent
+						return true; //access denied. message to player already sent
 				}
 				catch (SQLException ex)
 				{ //exception occurred again. Just display an error and give up
 					player.sendMessage("An error occurred.  We cannot send you to the nether right now. Please wait and try again later.");
 					
 					getLogger().info(ex.getMessage());
-					return false;
+					return true;
 				}
 			}
 			
 			//if we made it here then we can send them to the nether.
 			player.teleport(Bukkit.getWorld("world_nether").getSpawnLocation());
 			return true;
+		}
+		else if(command.equals("exit"))
+		{
+			if (player.getWorld().getName().equals("world_nether"))
+			{
+				player.teleport(Bukkit.getWorld("world").getSpawnLocation());
+				_dbAccess.exitNether(player);
+			}
+			else
+				player.sendMessage("You must be in the nether world to be able to exit it O.o");
 		}
 		
 		//default fall through

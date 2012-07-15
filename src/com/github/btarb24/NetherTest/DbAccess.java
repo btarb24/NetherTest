@@ -2,28 +2,33 @@ package com.github.btarb24.NetherTest;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.logging.Logger;
 import java.sql.*;
 
 import org.bukkit.entity.Player;
 
 public class DbAccess 
 {
-	private Connection _connection = null;
-	private Statement _statement = null;
-	
 	private final String DB_MINS = "minutesUsed";
 	private final String DB_TIME = "lastActivity";
+	private final String DB_NAME = "name";
 	private final String DB_URL = "jdbc:mysql://127.0.0.1:3306/nether?user=root&password=imdeity";
 	
-	public DbAccess()
+	private Connection _connection = null; //the mysql db connection
+	private Statement _statement = null;   //the db statement to reuse
+	private Logger _logger = null;         //logger from the main class
+	
+	public DbAccess(Logger logger)
 	{
+		_logger = logger;
+		
 		try {
 			Class.forName("com.mysql.jdbc.Driver");	
 			_connection = DriverManager.getConnection (DB_URL);
-			_statement = _connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
+			_statement = _connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
 		}
-		catch (ClassNotFoundException e) { e.printStackTrace(); }
-		catch (SQLException e) { e.printStackTrace(); }
+		catch (ClassNotFoundException e) { _logger.severe(e.getMessage()); }
+		catch (SQLException e) {  _logger.severe(e.getMessage()); }
 	}
 	
 	/* checks the db to see if they have proper permissions and if they
@@ -34,17 +39,13 @@ public class DbAccess
 	{
 		//TODO: check and/or disable use of /chest?
 		
-		//CHECK THE PERMISSIONS
-		
-		//check that they haven't been in nether too recently
-		String query = String.format("SELECT * FROM activity WHERE name = '%s'", player.getName());
-		ResultSet rs = _statement.executeQuery(query);	
-		
-		rs.next(); //advance to the first record
+		//get the player's record from the db
+		ResultSet rs = retrieveRecord(player);
 		
 		//get the last activity time
 		Calendar cal = Calendar.getInstance();
-		rs.getTimestamp(DB_TIME, cal);
+		Timestamp dbTime = rs.getTimestamp(DB_TIME, cal);
+		cal.setTime(dbTime);
 		
 		//add the max frequency to the last activity time
 		cal.add(Calendar.HOUR, NetherTest.ENTRANCE_FREQUENCY);
@@ -105,6 +106,71 @@ public class DbAccess
 		return true;
 	}
 	
+	public void exitNether(Player player)
+	{
+		ResultSet rs = null;
+		try {
+			rs = retrieveRecord(player);
+
+			//get the last activity time
+			Calendar cal = Calendar.getInstance();
+			Timestamp dbTime = rs.getTimestamp(DB_TIME, cal);
+			cal.setTime(dbTime);
+
+			//current time
+			Calendar currentTime = Calendar.getInstance(); 
+			
+			//how many minutes were just spent in nether
+			int minutesSpent = getAbsoluteMinuteDiff(currentTime, cal);
+			
+			player.sendMessage(String.format("%d - %d", currentTime.getTime().getTime(), cal.getTime().getTime()));
+			
+			//how many minutes were previously spent in nether
+			int previousMinutes = rs.getInt(DB_MINS);
+			
+			//add it and save it to the db
+			int totalMinutes = minutesSpent + previousMinutes;
+			rs.updateInt(DB_MINS, totalMinutes);
+			
+			//and update the last activity time
+			updateTimestamp(rs);
+			
+			//push the changes to the db
+			rs.updateRow();	
+
+			player.sendMessage(String.format("You just spent %d minutes in Nether and a total of %d. The limit is %d.", minutesSpent, totalMinutes, NetherTest.MAX_SESSION_LENGTH));
+			
+		} catch (SQLException e) {
+			_logger.warning("Couldn't access db to exit nether. -- " + e.getMessage());
+			return;
+		}
+		
+		//cleanup //don't let it throw if we only have the exception on cleanup!
+		if (rs != null)
+		{
+			try { rs.close(); } catch (SQLException e) { }
+		}
+	}
+	
+	private ResultSet retrieveRecord(Player player) throws SQLException
+	{
+		//build query and execute it
+		String query = String.format("SELECT * FROM activity WHERE name = '%s'", player.getName());
+		ResultSet rs = _statement.executeQuery(query);	
+		
+		//move to first record if there is one
+		if (! rs.next())
+		{//they don't have a record yet.. make one so we can return it
+			rs.moveToInsertRow();//move to insert row
+			rs.updateString(DB_NAME, player.getName()); //make a record (other fields are auto-pop)
+			rs.insertRow(); //persist into result set and into db
+			rs.absolute(1); //move it to the first row (now that we have one)
+		}
+		
+		//return the result set with it positioned on the correct (and updatable) row
+		return rs;
+	}
+	
 	private int getHourDiff(Calendar future, Calendar now)
 	{
 		//3,600,000 milliseconds in an hour
@@ -122,6 +188,17 @@ public class DbAccess
 	
 	private int getMinuteDiff(Calendar future, Calendar now)
 	{
+		//get total minutes different
+		int mins = getAbsoluteMinuteDiff(future, now);
+		
+		//now mod it so that it isn't greater than an hour
+		int remainder = mins % 60;
+		
+		return remainder;
+	}
+	
+	private int getAbsoluteMinuteDiff(Calendar future, Calendar now)
+	{
 		//60,000 milliseconds in a minute
 		long min = 60000;
 		
@@ -131,11 +208,8 @@ public class DbAccess
 		
 		//figure out the difference
 		int dif = (int) (mins1 - mins2);
-		
-		//now mod it so that it isn't greater than an hour
-		int remainder = dif % 60;
-		
-		return remainder;
+				
+		return dif;
 	}
 	
 	private void updateTimestamp(ResultSet rs) throws SQLException
