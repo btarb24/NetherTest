@@ -46,7 +46,10 @@ public class SessionMonitorTask extends TimerTask
 					player.sendMessage(String.format("You've used all your Nether minutes. You may re-enter in %d hours", NetherTest.ENTRANCE_FREQUENCY));					
 				}
 			}
-			catch (SQLException e) { /* nommy noms noms */ }
+			catch (SQLException e) 
+			{ 
+				_dbAccess.initDbConnection(); //re-init the connection in case there is a problem
+			}
 		}
 	}
 }

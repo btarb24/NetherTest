@@ -22,10 +22,24 @@ public class DbAccess
 	{
 		_logger = logger;
 		
+		initDbConnection();
+	}
+	
+	public void initDbConnection()
+	{
 		try {
 			Class.forName("com.mysql.jdbc.Driver");	
-			_connection = DriverManager.getConnection (DB_URL);
-			_statement = _connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+			
+			//init the connection if it is null or closed
+			if (_connection == null || _connection.isClosed())
+			{
+				_connection = DriverManager.getConnection (DB_URL);
+				_statement = null;
+			}
+			
+			//init the statement if it is null or closed
+			if (_statement == null || _statement.isClosed())
+				_statement = _connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
 		}
 		catch (ClassNotFoundException e) { _logger.severe(e.getMessage()); }
 		catch (SQLException e) {  _logger.severe(e.getMessage()); }
@@ -37,6 +51,8 @@ public class DbAccess
 	 */
 	public boolean canEnter(Player player) throws SQLException
 	{
+		initDbConnection(); //re-init the connection in case there is a problem
+		
 		//TODO: check and/or disable use of /chest?
 		
 		//get the player's record from the db
@@ -206,6 +222,7 @@ public class DbAccess
 		} 
 		catch (SQLException e) {
 			player.sendMessage("Sorry, an error occurred while pulling up your details. Please try again later.");
+			initDbConnection(); //re-init the connection in case there is a problem
 		}
 		
 		//cleanup //don't let it throw if we only have the exception on cleanup!
@@ -235,6 +252,7 @@ public class DbAccess
 		} 
 		catch (SQLException e) {
 			_logger.warning("Hmm, i couldn't persist an endNetherSession to the db?  -- " + e.getMessage());
+			initDbConnection(); //re-init the connection in case there is a problem
 		}
 		
 		//cleanup //don't let it throw if we only have the exception on cleanup!

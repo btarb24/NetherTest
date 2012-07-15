@@ -90,11 +90,12 @@ public class NetherTest extends JavaPlugin
 			
 			try
 			{//make sure they have time left and they have a valid inventory
-				if (! _dbAccess.canEnter(player) || !isInventoryValid(player))
+				if (!isInventoryValid(player) || !_dbAccess.canEnter(player))
 					return true; //access denied. message to player already sent
 			}
 			catch (SQLException e)
 			{ //exception occurred. consider it a failed attempt.  try once more before giving up
+				_dbAccess.initDbConnection(); //re-init the connection in case there is a problem
 				try
 				{
 					if (! _dbAccess.canEnter(player))
@@ -155,6 +156,9 @@ public class NetherTest extends JavaPlugin
 		while (iterator.hasNext())
 		{
 			ItemStack cur = iterator.next();
+			
+			if (cur == null)
+				continue;
 			
 			int id = cur.getTypeId();
 			
