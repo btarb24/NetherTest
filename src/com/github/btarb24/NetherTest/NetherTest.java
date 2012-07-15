@@ -3,6 +3,8 @@ package com.github.btarb24.NetherTest;
 import java.sql.SQLException;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -91,7 +93,7 @@ public class NetherTest extends JavaPlugin
 			}
 			
 			//if we made it here then we can send them to the nether.
-			player.teleport(Bukkit.getWorld("world_nether").getSpawnLocation());
+			player.teleport(getNetherSpawnLoc(Bukkit.getWorld("world_nether")));
 			return true;
 		}
 		else if(command.equals("exit"))
@@ -123,5 +125,31 @@ public class NetherTest extends JavaPlugin
 		//max out their minutes in the db so they can't rejoin
 		_dbAccess.EndNetherSession(player);
 		player.teleport(Bukkit.getWorld("world").getSpawnLocation()); //send them back to main world
+		player.sendMessage(String.format("You died in the Nether. You may not re-enter for another %d hours.", ENTRANCE_FREQUENCY ));
+	}
+	
+	private Location getNetherSpawnLoc (World world)
+	{
+		//put you on 0,0 at the highest Y.
+		int x = 0;
+		int z = 0;
+		int y = 250;
+		Location loc = new Location(world, x, y, z);
+		
+		//gotta be a better way to do this.  I did some googling and got nowhere.. unsure how. I would have
+		//though it would be very common to find a safe Y. My search terms likely sucked?  Anyway, not a pretty method, but functional
+		//TODO: make this better
+		while (loc.getBlock().getTypeId() == 0)
+			loc.setY(--y);
+		
+		//make sure it wont kill you. change to a happy place if it will
+		int block = loc.getBlockY();
+		if (block == 10 || block == 11 || block == 51)
+			loc.getBlock().setTypeId(91);
+		
+		// move back up 1 block
+		loc.setY(y++);
+		
+		return loc;
 	}
 }
