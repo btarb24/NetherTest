@@ -76,8 +76,10 @@ public class DbAccess
 				//calc how long until they can try again
 				int calcMin =  getMinuteDiff(cal, currentTime);
 				int calcHour = getHourDiff(cal, currentTime);
-				if (calcMin > 0)
+				if (calcMin > 0 && calcMin != 60) //decrement the hour by 1 if we have minutes (not 0 or 60)
 					calcHour--;
+				if (calcMin == 60) //having a value of 60 minutes is silly
+					calcMin = 0;
 				
 				//output the informational error message
 				player.sendMessage(String.format("You've exceeded the %d minute maximum per %d hours", NetherTest.MAX_SESSION_LENGTH, NetherTest.ENTRANCE_FREQUENCY));
@@ -120,9 +122,7 @@ public class DbAccess
 			
 			//how many minutes were just spent in nether
 			int minutesSpent = getAbsoluteMinuteDiff(currentTime, cal);
-			
-			player.sendMessage(String.format("%d - %d", currentTime.getTime().getTime(), cal.getTime().getTime()));
-			
+						
 			//how many minutes were previously spent in nether
 			int previousMinutes = rs.getInt(DB_MINS);
 			
@@ -167,8 +167,10 @@ public class DbAccess
 			Calendar currentTime = Calendar.getInstance(); 
 			int calcMin =  60- getMinuteDiff(currentTime, cal);
 			int calcHour = NetherTest.ENTRANCE_FREQUENCY - getHourDiff(currentTime, cal);	
-			if (calcMin > 0)
+			if (calcMin > 0 && calcMin != 60) //decrement the hour by 1 if we have minutes (not 0 or 60)
 				calcHour--;
+			if (calcMin == 60) //having a value of 60 minutes is silly
+				calcMin = 0;
 			
 			player.sendMessage(String.format(
 					"You've used %d of your %d minutes within a %d hour period. Your minutes will refresh if you do not re-enter the nether for %d hours %d minutes.",
