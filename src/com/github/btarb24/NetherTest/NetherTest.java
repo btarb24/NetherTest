@@ -26,12 +26,13 @@ public class NetherTest extends JavaPlugin
 	
 	public void onLoad()
 	{ 
-		_dbAccess = new DbAccess(getLogger());
+		_dbAccess = new DbAccess(getLogger()); //instantiate the db access class
 		getLogger().info("NetherTest Loaded");
 	}
 	
 	public void onEnable()
 	{ 
+		new EvtHandler(this); //instantiate the event handler class
 		getLogger().info("NetherTest Enabled");
 	}
 	 
@@ -114,5 +115,13 @@ public class NetherTest extends JavaPlugin
 		
 		//default fall through to print out the usage
 		return false; 
+	}
+	
+	public void EndNetherSession(Player player)
+	{//Player needs their session minutes maxed out so that they can't join until time expires
+		
+		//max out their minutes in the db so they can't rejoin
+		_dbAccess.EndNetherSession(player);
+		player.teleport(Bukkit.getWorld("world").getSpawnLocation()); //send them back to main world
 	}
 }

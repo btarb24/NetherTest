@@ -175,7 +175,36 @@ public class DbAccess
 					calcMin));
 		} 
 		catch (SQLException e) {
+			player.sendMessage("Sorry, an error occurred while pulling up your details. Please try again later.");
+		}
+		
+		//cleanup //don't let it throw if we only have the exception on cleanup!
+		if (rs != null)
+		{
+			try { rs.close(); } catch (SQLException e) { }
+		}
+	}
 
+	public void EndNetherSession(Player player)
+	{//Player needs their session minutes maxed out so that they can't join until time expires
+
+		ResultSet rs = null;
+		
+		try {
+			//get their record
+			rs = retrieveRecord(player);
+
+			//set time to now
+			updateTimestamp(rs);
+
+			//max minutes
+			rs.updateInt(DB_MINS, Integer.MAX_VALUE);
+
+			//push the changes to the db
+			rs.updateRow();	
+		} 
+		catch (SQLException e) {
+			_logger.warning("Hmm, i couldn't persist an endNetherSession to the db?  -- " + e.getMessage());
 		}
 		
 		//cleanup //don't let it throw if we only have the exception on cleanup!
