@@ -108,6 +108,30 @@ public class DbAccess
 		return true;
 	}
 	
+	public boolean surpassedLimit (Player player) throws SQLException
+	{
+		//get their record
+		ResultSet rs = retrieveRecord(player);
+
+		//get the last activity time
+		Calendar cal = getTimestampFromDb(rs);
+		
+		//current time
+		Calendar currentTime = Calendar.getInstance(); 
+		
+		//how many minutes were just spent in nether
+		int minutesSpent = getAbsoluteMinuteDiff(currentTime, cal);
+					
+		//how many minutes were previously spent in nether
+		int previousMinutes = rs.getInt(DB_MINS);
+		
+		//add it and save it to the db
+		int totalMinutes = minutesSpent + previousMinutes;
+		
+		//did they exceed?
+		return totalMinutes > NetherTest.MAX_SESSION_LENGTH;
+	}
+	
 	public void exitNether(Player player)
 	{
 		ResultSet rs = null;
@@ -192,7 +216,7 @@ public class DbAccess
 	}
 
 	public void EndNetherSession(Player player)
-	{//Player needs their session minutes maxed out so that they can't join until time expires
+	{//Player needs their session minutes persisted and timestamp updated.
 
 		ResultSet rs = null;
 		
@@ -204,7 +228,7 @@ public class DbAccess
 			updateTimestamp(rs);
 
 			//max minutes
-			rs.updateInt(DB_MINS, Integer.MAX_VALUE);
+			rs.updateInt(DB_MINS, NetherTest.MAX_SESSION_LENGTH);
 
 			//push the changes to the db
 			rs.updateRow();	

@@ -1,6 +1,7 @@
 package com.github.btarb24.NetherTest;
 
 import java.sql.SQLException;
+import java.util.Timer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -24,7 +25,11 @@ public class NetherTest extends JavaPlugin
 	//the max length of time a player may remain in the nether per session. measured in MINUTES
 	public static final int MAX_SESSION_LENGTH = 60;
 	
+	private static final int MONITOR_INTERVAL = 3*60*1000; //3 minutes due to potentially high db access rate
+	
 	private DbAccess _dbAccess = null;
+	Timer _timer = new Timer("SessionMonitor");
+	SessionMonitorTask _monitorTask;
 	
 	public void onLoad()
 	{ 
@@ -33,13 +38,22 @@ public class NetherTest extends JavaPlugin
 	}
 	
 	public void onEnable()
-	{ 
+	{
 		new EvtHandler(this); //instantiate the event handler class
+		
+		//start the session monitor
+		_monitorTask = new SessionMonitorTask(getLogger());
+		_timer.schedule(_monitorTask, 0, MONITOR_INTERVAL); 
+		
 		getLogger().info("NetherTest Enabled");
 	}
 	 
 	public void onDisable()
-	{ 
+	{
+		//stop the monitor and let it GC
+		_monitorTask.cancel();
+		_monitorTask = null;
+		
 		getLogger().info("NetherTest Disabled");
 	}
 	
