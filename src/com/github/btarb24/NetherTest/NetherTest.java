@@ -1,6 +1,7 @@
 package com.github.btarb24.NetherTest;
 
 import java.sql.SQLException;
+import java.util.ListIterator;
 import java.util.Timer;
 
 import org.bukkit.Bukkit;
@@ -9,6 +10,8 @@ import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /* Transitions a player into the nether via player request.
@@ -86,8 +89,8 @@ public class NetherTest extends JavaPlugin
 			}	
 			
 			try
-			{
-				if (! _dbAccess.canEnter(player))
+			{//make sure they have time left and they have a valid inventory
+				if (! _dbAccess.canEnter(player) || !isInventoryValid(player))
 					return true; //access denied. message to player already sent
 			}
 			catch (SQLException e)
@@ -140,6 +143,41 @@ public class NetherTest extends JavaPlugin
 		_dbAccess.EndNetherSession(player);
 		player.teleport(Bukkit.getWorld("world").getSpawnLocation()); //send them back to main world
 		player.sendMessage(String.format("You died in the Nether. You may not re-enter for another %d hours.", ENTRANCE_FREQUENCY ));
+	}
+	
+	private boolean isInventoryValid(Player player)
+	{
+		//get their inventory
+		PlayerInventory inv = player.getInventory();
+		
+		//now iterate over it to ensure they ONLY have food, armor or tools.  no other items permitted
+		ListIterator<ItemStack> iterator = inv.iterator();
+		while (iterator.hasNext())
+		{
+			ItemStack cur = iterator.next();
+			
+			int id = cur.getTypeId();
+			
+			if (cur.getType().isEdible()) //MMmmmm..  food 
+				continue;
+			if (id >= 298 && id <= 317) //armor
+				continue;
+			if (id == 261 || id == 262) //bow & arrow
+				continue;
+			if ((id >= 267 && id <= 279) || (id>= 283 && id <= 286)) //tools .. minus hoes ..poor, lonely tools :(
+				continue;
+			if (id >= 290 && id <= 294) //there be dem hoes :D
+				continue; 
+			if (id == 359) //oh i guess shears can come too
+				continue;
+			
+			//ok we found an item that's prohibited.  
+			player.sendMessage("You can only bring tools, armor and food with you. Go store your other items and try again.");
+			return false;
+		}
+		
+		//good to go
+		return true;
 	}
 	
 	private Location getNetherSpawnLoc (World world)
