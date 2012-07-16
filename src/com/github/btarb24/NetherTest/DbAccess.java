@@ -207,6 +207,13 @@ public class DbAccess
 			{	
 				//how many minutes were previously spent in nether
 				int previousMinutes = rs.getInt(DB_MINS);
+				
+				//if they're currently in the nether then count those minutes since they entered the world.
+				int currentNetherMins = 0;
+				if (player.getWorld().getName().equals(NetherTest.NETHER_SERVER_NAME))
+				{
+					currentNetherMins = getHourDiff(cal, currentTime) + NetherTest.ENTRANCE_FREQUENCY;
+				}
 
 				//calc how long until they can try again
 				int calcMin =  getMinuteDiff(cal, currentTime);
@@ -218,7 +225,7 @@ public class DbAccess
 				
 				player.sendMessage(String.format(
 						"You've used %d of your %d minutes within a %d hour period. Your minutes will refresh if you do not re-enter the nether for %d hours %d minutes.",
-						previousMinutes,
+						previousMinutes + currentNetherMins,
 						NetherTest.MAX_SESSION_LENGTH,
 						NetherTest.ENTRANCE_FREQUENCY,
 						calcHour,

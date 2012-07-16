@@ -30,6 +30,8 @@ public class NetherTest extends JavaPlugin
 	
 	private static final int MONITOR_INTERVAL = 3*60*1000; //3 minutes due to potentially high db access rate
 	
+	public static final String NETHER_SERVER_NAME = "world_nether";
+	
 	private DbAccess _dbAccess = null;
 	Timer _timer = new Timer("SessionMonitor");
 	SessionMonitorTask _monitorTask;
@@ -82,7 +84,7 @@ public class NetherTest extends JavaPlugin
 		if(command.equals("enter"))
 		{ //enter the nether world if permission is granted.
 			//make sure they're not already in the nether. ignore them if they're dumb
-			if (player.getWorld().getName().equals("world_nether"))
+			if (player.getWorld().getName().equals(NETHER_SERVER_NAME))
 			{
 				player.sendMessage("You're already in the Nether.");
 				return true;
@@ -111,13 +113,13 @@ public class NetherTest extends JavaPlugin
 			}
 			
 			//if we made it here then we can send them to the nether.
-			player.teleport(getNetherSpawnLoc(Bukkit.getWorld("world_nether")));
+			player.teleport(getNetherSpawnLoc(Bukkit.getWorld(NETHER_SERVER_NAME)));
 			return true;
 		}
 		else if(command.equals("exit"))
 		{
 			//make sure we're in the nether before porting/db modification
-			if (player.getWorld().getName().equals("world_nether"))
+			if (player.getWorld().getName().equals(NETHER_SERVER_NAME))
 			{
 				player.teleport(Bukkit.getWorld("world").getSpawnLocation());
 				_dbAccess.exitNether(player);
