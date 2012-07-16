@@ -12,7 +12,7 @@ public class EvtHandler implements Listener
 		nether.getServer().getPluginManager().registerEvents(this, nether);
 		_nether = nether; 
 	}
-
+	
 	@EventHandler
 	public void OnPlayerDeath(PlayerDeathEvent event)
 	{

@@ -199,26 +199,35 @@ public class DbAccess
 
 			//get the last activity time
 			Calendar cal = getTimestampFromDb(rs);
-
-			//how many minutes were previously spent in nether
-			int previousMinutes = rs.getInt(DB_MINS);
-
-			//calc how long until they can try again
 			Calendar currentTime = Calendar.getInstance(); 
-			int calcMin =  60- getMinuteDiff(currentTime, cal);
-			int calcHour = NetherTest.ENTRANCE_FREQUENCY - getHourDiff(currentTime, cal);	
-			if (calcMin > 0 && calcMin != 60) //decrement the hour by 1 if we have minutes (not 0 or 60)
-				calcHour--;
-			if (calcMin == 60) //having a value of 60 minutes is silly
-				calcMin = 0;
-			
-			player.sendMessage(String.format(
-					"You've used %d of your %d minutes within a %d hour period. Your minutes will refresh if you do not re-enter the nether for %d hours %d minutes.",
-					previousMinutes,
-					NetherTest.MAX_SESSION_LENGTH,
-					NetherTest.ENTRANCE_FREQUENCY,
-					calcHour,
-					calcMin));
+
+			//check if their max session time has reset or not so we know which msg to show
+			cal.add(Calendar.HOUR, NetherTest.ENTRANCE_FREQUENCY);
+			if (cal.after(currentTime))
+			{	
+				//how many minutes were previously spent in nether
+				int previousMinutes = rs.getInt(DB_MINS);
+
+				//calc how long until they can try again
+				int calcMin =  getMinuteDiff(cal, currentTime);
+				int calcHour = getHourDiff(cal, currentTime);	
+				if (calcMin > 0 && calcMin != 60) //decrement the hour by 1 if we have minutes (not 0 or 60)
+					calcHour--;
+				if (calcMin == 60) //having a value of 60 minutes is silly
+					calcMin = 0;
+				
+				player.sendMessage(String.format(
+						"You've used %d of your %d minutes within a %d hour period. Your minutes will refresh if you do not re-enter the nether for %d hours %d minutes.",
+						previousMinutes,
+						NetherTest.MAX_SESSION_LENGTH,
+						NetherTest.ENTRANCE_FREQUENCY,
+						calcHour,
+						calcMin));
+			}
+			else //all minute available.
+			{
+				player.sendMessage(String.format("You have all %d of your minutes available.", NetherTest.MAX_SESSION_LENGTH));;
+			}
 		} 
 		catch (SQLException e) {
 			player.sendMessage("Sorry, an error occurred while pulling up your details. Please try again later.");
