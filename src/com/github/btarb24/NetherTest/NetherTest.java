@@ -155,6 +155,18 @@ public class NetherTest extends JavaPlugin
 		_dbAccess.exitNether(player);
 	}
 	
+	public boolean hasTimeRemaining(Player player)
+	{
+		//verify if the player is currently permitted in nether (used when they login and were already in nether so no need to check inv)
+		//the exceptionto this is that if they havent been online in a while and they're actually starting a new session then they get
+		//to stay where they were and have their minutes set to 0.
+		try {
+			return _dbAccess.canEnter(player);
+		} catch (SQLException e) {
+			return false;  //just punt them back to main world if there was an error
+		}
+	}
+	
 	private boolean isInventoryValid(Player player)
 	{
 		//get their inventory
