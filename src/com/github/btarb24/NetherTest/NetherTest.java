@@ -23,18 +23,6 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public class NetherTest extends JavaPlugin 
 { 
-	//how often a player can enter the nether. Measured in HOURS
-	public static final int ENTRANCE_FREQUENCY = 12;
-	
-	//the max length of time a player may remain in the nether per session. measured in MINUTES
-	public static final int MAX_SESSION_LENGTH = 60;
-	
-	private static final int MONITOR_INTERVAL = 3*60*1000; //3 minutes due to potentially high db access rate
-	
-	public static final String NETHER_SERVER_NAME = "world_nether";
-	
-	public static final int PIGZOMBIE_GOLD_DROP_PERCENT = 10; //what percent to have pigzombie drop a nugget
-	
 	private DbAccess _dbAccess = null;
 	Timer _timer = new Timer("SessionMonitor");
 	SessionMonitorTask _monitorTask;
@@ -51,7 +39,7 @@ public class NetherTest extends JavaPlugin
 		
 		//start the session monitor
 		_monitorTask = new SessionMonitorTask(getLogger());
-		_timer.schedule(_monitorTask, 0, MONITOR_INTERVAL); 
+		_timer.schedule(_monitorTask, 0, Configuration.MONITOR_INTERVAL); 
 		
 		getLogger().info("NetherTest Enabled");
 	}
@@ -87,7 +75,7 @@ public class NetherTest extends JavaPlugin
 		if(command.equals("enter"))
 		{ //enter the nether world if permission is granted.
 			//make sure they're not already in the nether. ignore them if they're dumb
-			if (player.getWorld().getName().equals(NETHER_SERVER_NAME))
+			if (player.getWorld().getName().equals(Configuration.NETHER_SERVER_NAME))
 			{
 				player.sendMessage("You're already in the Nether.");
 				return true;
@@ -116,13 +104,13 @@ public class NetherTest extends JavaPlugin
 			}
 			
 			//if we made it here then we can send them to the nether.
-			player.teleport(getNetherSpawnLoc(Bukkit.getWorld(NETHER_SERVER_NAME)));
+			player.teleport(getNetherSpawnLoc(Bukkit.getWorld(Configuration.NETHER_SERVER_NAME)));
 			return true;
 		}
 		else if(command.equals("exit"))
 		{
 			//make sure we're in the nether before porting/db modification
-			if (player.getWorld().getName().equals(NETHER_SERVER_NAME))
+			if (player.getWorld().getName().equals(Configuration.NETHER_SERVER_NAME))
 			{
 				player.teleport(Bukkit.getWorld("world").getSpawnLocation());
 				_dbAccess.exitNether(player);
@@ -141,7 +129,7 @@ public class NetherTest extends JavaPlugin
 		{//because i'm lazy and didn't want to walk to find something other than bedrock :)
 			//and because i needed items to kill pig zombies to test 
 			player.getInventory().addItem(new ItemStack(Material.DIAMOND_SWORD), new ItemStack(Material.DIAMOND_CHESTPLATE), new ItemStack(Material.DIAMOND_LEGGINGS), new ItemStack(Material.DIAMOND_BOOTS), new ItemStack(Material.DIAMOND_HELMET));
-			if (player.getWorld().getName().equals(NETHER_SERVER_NAME))
+			if (player.getWorld().getName().equals(Configuration.NETHER_SERVER_NAME))
 				player.teleport(player.getWorld().getSpawnLocation());
 			return true;
 		}
@@ -156,7 +144,7 @@ public class NetherTest extends JavaPlugin
 		//max out their minutes in the db so they can't rejoin
 		_dbAccess.EndNetherSession(player);
 		player.teleport(Bukkit.getWorld("world").getSpawnLocation()); //send them back to main world
-		player.sendMessage(String.format("You died in the Nether. You may not re-enter for another %d hours.", ENTRANCE_FREQUENCY ));
+		player.sendMessage(String.format("You died in the Nether. You may not re-enter for another %d hours.", Configuration.ENTRANCE_FREQUENCY ));
 	}
 	
 	public void logoutWhileInNether(Player player)

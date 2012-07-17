@@ -23,7 +23,7 @@ public class SessionMonitorTask extends TimerTask
 	@Override
 	public void run() 
 	{
-		World world = Bukkit.getWorld("world_nether");
+		World world = Bukkit.getWorld(Configuration.NETHER_SERVER_NAME);
 		List<Player> players = world.getPlayers();
 		
 		//dont waste time connecting to db if we dont have players
@@ -43,7 +43,7 @@ public class SessionMonitorTask extends TimerTask
 					player.teleport(Bukkit.getWorld("world").getSpawnLocation());
 					
 					//tell them why
-					player.sendMessage(String.format("You've used all your Nether minutes. You may re-enter in %d hours", NetherTest.ENTRANCE_FREQUENCY));					
+					player.sendMessage(String.format("You've used all your Nether minutes. You may re-enter in %d hours", Configuration.ENTRANCE_FREQUENCY));					
 				}
 			}
 			catch (SQLException e) 

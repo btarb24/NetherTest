@@ -27,7 +27,7 @@ public class EvtHandler implements Listener
 	{
 		//check if they were in the nether.  kill their session if they were. 
 		//they will respawn in main world and not be able to get back in nether
-		if (event.getEntity().getWorld().getName().equalsIgnoreCase(NetherTest.NETHER_SERVER_NAME))
+		if (event.getEntity().getWorld().getName().equalsIgnoreCase(Configuration.NETHER_SERVER_NAME))
 			_nether.endNetherSession(event.getEntity());
 	}
 	
@@ -35,7 +35,7 @@ public class EvtHandler implements Listener
 	public void OnPlayerQuit(PlayerQuitEvent event)
 	{
 		//persists the player's used nether minutes if they logout while in nether
-		if (event.getPlayer().getWorld().getName().equals(NetherTest.NETHER_SERVER_NAME))
+		if (event.getPlayer().getWorld().getName().equals(Configuration.NETHER_SERVER_NAME))
 			_nether.logoutWhileInNether(event.getPlayer());
 	}
 	
@@ -46,7 +46,7 @@ public class EvtHandler implements Listener
 		//teleport them to main world.  
 		//positive effect.. checking info in nether will not display skewed stats
 		//negative effect.. the player will not be in the same nether location as when they logged out
-		if (event.getPlayer().getWorld().getName().equals(NetherTest.NETHER_SERVER_NAME))
+		if (event.getPlayer().getWorld().getName().equals(Configuration.NETHER_SERVER_NAME))
 		{
 			event.getPlayer().sendMessage(event.getPlayer().getWorld().getName());
 			//punt them back to main world if they are out of time but somehow were still in nether.
@@ -84,7 +84,7 @@ public class EvtHandler implements Listener
 			int rand = new Random().nextInt(100); 
 
 			//give a nugget if it is within the configured drop percent
-			if (rand < NetherTest.PIGZOMBIE_GOLD_DROP_PERCENT) 
+			if (rand < Configuration.PIGZOMBIE_GOLD_DROP_PERCENT) 
 			{ //Give nugget  (yes, this will double up loot.. that's the downfall of not modifying the real loot table)
 				event.getDrops().add(new ItemStack(Material.GOLD_NUGGET));
 				_nether.getLogger().info(String.format("added nugget", rand));
