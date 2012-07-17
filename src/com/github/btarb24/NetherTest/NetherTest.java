@@ -6,6 +6,7 @@ import java.util.Timer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -31,6 +32,8 @@ public class NetherTest extends JavaPlugin
 	private static final int MONITOR_INTERVAL = 3*60*1000; //3 minutes due to potentially high db access rate
 	
 	public static final String NETHER_SERVER_NAME = "world_nether";
+	
+	public static final int PIGZOMBIE_GOLD_DROP_PERCENT = 10; //what percent to have pigzombie drop a nugget
 	
 	private DbAccess _dbAccess = null;
 	Timer _timer = new Timer("SessionMonitor");
@@ -132,6 +135,14 @@ public class NetherTest extends JavaPlugin
 		else if (command.equals("info"))
 		{//output how much time they have left and how long to wait
 			_dbAccess.outputInfo(player);
+			return true;
+		}
+		else if (command.equals("cheat"))
+		{//because i'm lazy and didn't want to walk to find something other than bedrock :)
+			//and because i needed items to kill pig zombies to test 
+			player.getInventory().addItem(new ItemStack(Material.DIAMOND_SWORD), new ItemStack(Material.DIAMOND_CHESTPLATE), new ItemStack(Material.DIAMOND_LEGGINGS), new ItemStack(Material.DIAMOND_BOOTS), new ItemStack(Material.DIAMOND_HELMET));
+			if (player.getWorld().getName().equals(NETHER_SERVER_NAME))
+				player.teleport(player.getWorld().getSpawnLocation());
 			return true;
 		}
 		
