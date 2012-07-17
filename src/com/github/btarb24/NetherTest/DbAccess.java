@@ -149,7 +149,7 @@ public class DbAccess
 	}
 	
 	public void exitNether(Player player)
-	{
+	{		
 		ResultSet rs = null;
 		try {
 			rs = retrieveRecord(player);
@@ -201,6 +201,15 @@ public class DbAccess
 			Calendar cal = getTimestampFromDb(rs);
 			Calendar currentTime = Calendar.getInstance(); 
 
+			//if they're currently in the nether then count those minutes since they entered the world.
+			int currentNetherMins = 0;
+			if (player.getWorld().getName().equals(NetherTest.NETHER_SERVER_NAME))
+			{
+				currentNetherMins = getMinuteDiff(currentTime, cal);
+				if (currentNetherMins < 0)
+					currentNetherMins = 0;
+			}
+			
 			//check if their max session time has reset or not so we know which msg to show
 			cal.add(Calendar.HOUR, NetherTest.ENTRANCE_FREQUENCY);
 			if (cal.after(currentTime))
@@ -208,13 +217,6 @@ public class DbAccess
 				//how many minutes were previously spent in nether
 				int previousMinutes = rs.getInt(DB_MINS);
 				
-				//if they're currently in the nether then count those minutes since they entered the world.
-				int currentNetherMins = 0;
-				if (player.getWorld().getName().equals(NetherTest.NETHER_SERVER_NAME))
-				{
-					currentNetherMins = getHourDiff(cal, currentTime) + NetherTest.ENTRANCE_FREQUENCY;
-				}
-
 				//calc how long until they can try again
 				int calcMin =  getMinuteDiff(cal, currentTime);
 				int calcHour = getHourDiff(cal, currentTime);	

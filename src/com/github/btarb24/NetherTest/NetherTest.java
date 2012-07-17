@@ -139,13 +139,20 @@ public class NetherTest extends JavaPlugin
 		return false; 
 	}
 	
-	public void EndNetherSession(Player player)
+	public void endNetherSession(Player player)
 	{//Player needs their session minutes maxed out so that they can't join until time expires
 		
 		//max out their minutes in the db so they can't rejoin
 		_dbAccess.EndNetherSession(player);
 		player.teleport(Bukkit.getWorld("world").getSpawnLocation()); //send them back to main world
 		player.sendMessage(String.format("You died in the Nether. You may not re-enter for another %d hours.", ENTRANCE_FREQUENCY ));
+	}
+	
+	public void logoutWhileInNether(Player player)
+	{
+		//this will only persist their used minutes. It will not teleport them.. so they'll be in nether 
+		//when they log back in later
+		_dbAccess.exitNether(player);
 	}
 	
 	private boolean isInventoryValid(Player player)
