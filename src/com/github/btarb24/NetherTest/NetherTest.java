@@ -2,6 +2,7 @@ package com.github.btarb24.NetherTest;
 
 import java.io.File;
 import java.sql.SQLException;
+import java.util.Calendar;
 import java.util.ListIterator;
 import java.util.Timer;
 
@@ -9,7 +10,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.WorldCreator;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -29,15 +29,26 @@ public class NetherTest extends JavaPlugin
 	private DbAccess _dbAccess = null;
 	Timer _timer = new Timer("SessionMonitor");
 	SessionMonitorTask _monitorTask;
+	Configuration _config;
 	
 	public void onLoad()
 	{
 		_dbAccess = new DbAccess(getLogger()); //instantiate the db access class
+		
+		//load the config file
+		try {
+			_config = new Configuration();
+		} catch (Exception e) {
+			getLogger().warning("Failed to load config file.  -- " + e.toString());
+		}
+		
 		getLogger().info("NetherTest Loaded");
 	}
 	
 	public void onEnable()
 	{
+		resetNetherWorld(false);
+		
 		new EvtHandler(this); //instantiate the event handler class
 				
 		//start the session monitor
@@ -47,30 +58,34 @@ public class NetherTest extends JavaPlugin
 		getLogger().info("NetherTest Enabled");
 	}
 	
-	public void resetNetherWorld()
+	public void resetNetherWorld(boolean override)
 	{
-		//make a creator that has the config of the current nether world
-		WorldCreator creator = new WorldCreator(Configuration.NETHER_SERVER_NAME);
-		creator.copy(Bukkit.getWorld(Configuration.NETHER_SERVER_NAME));
+		//this is where the nether world file lives
+		File worldFolder = new File(".\\" + Configuration.NETHER_SERVER_NAME);
 		
-		//get the folder
-		File worldFolder = Bukkit.getWorld(Configuration.NETHER_SERVER_NAME).getWorldFolder();
+		//load from the config file so we know how many days the world shoud last
+		int maxDays = Integer.parseInt(_config.getProperty("NetherDaysUntilReset", "7"));
+		
+		//get the current day from epoch.. that num is how many ms in a day
+		Calendar now = Calendar.getInstance();
+		long currentDay = now.getTimeInMillis() / 86400000; 
+		
+		//load the last reset day from the config file
+		long lastResetDay = Long.parseLong(_config.getProperty("NetherWorldLastResetDay", "1"));
+		
+		getLogger().warning(String.format("max: %d .. current: %d  .. last: %d", maxDays, currentDay, lastResetDay));
+		//do we need to reset again?
+		if (currentDay - lastResetDay >= maxDays || override)
+		{
+			//yes we do.. let's recursively delete the world folder and files
+			deleteFolder(worldFolder);
+			
+			//and save the new day into the config file
+			_config.setProperty("NetherWorldLastResetDay", String.format("%d", currentDay));
 
-		//unload the world
-		getLogger().info(String.format("Unload nether world successful: %b", Bukkit.getServer().unloadWorld(Configuration.NETHER_SERVER_NAME, false)));
-		
-		//avoid lame open stream bug: http://forums.bukkit.org/threads/deleting-world.47351/
-		getLogger().info(String.format("Close internal file streams for nether world successful: %b", BorrowedCode.clearWorldReference(Bukkit.getWorld(Configuration.NETHER_SERVER_NAME), this)));
-		
-		//recursively delete the world folder and files
-		deleteFolder(worldFolder);
-		
-		//did it work?
-		getLogger().info(String.format("Nether world deletion successful: %b", worldFolder.exists()));
-		
-		//generate a new world (or if delete failed it will just reload it)
-		Bukkit.getServer().createWorld(creator);
-		getLogger().info("Nether world has been reset");
+			//did it work?
+			getLogger().info(String.format("Nether world deletion successful: %b", worldFolder.exists()));
+		}
 	}
 	
 	private void deleteFolder(File file)
@@ -187,7 +202,7 @@ public class NetherTest extends JavaPlugin
 		}
 		else if (command.equals("reset"))
 		{//simple command to test function
-			resetNetherWorld();
+			resetNetherWorld(true);
 			return true;
 		}
 		

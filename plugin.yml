@@ -1,6 +1,7 @@
 name: Deity.nether
 main: com.github.btarb24.NetherTest.NetherTest
 version: 0.1
+load: STARTUP
 commands:
    nether:
       description: Enter the nether world

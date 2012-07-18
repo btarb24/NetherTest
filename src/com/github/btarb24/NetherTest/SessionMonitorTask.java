@@ -23,7 +23,14 @@ public class SessionMonitorTask extends TimerTask
 	@Override
 	public void run() 
 	{
+		//get the nether world
 		World world = Bukkit.getWorld(Configuration.NETHER_SERVER_NAME);
+		
+		//sanity  (world may not be loaded yet if plugin just started)
+		if (world == null)
+			return;
+		
+		//get a list of all the players in the nether world
 		List<Player> players = world.getPlayers();
 		
 		//dont waste time connecting to db if we dont have players
