@@ -1,5 +1,6 @@
 package com.github.btarb24.NetherTest;
 
+import java.io.File;
 import java.sql.SQLException;
 import java.util.ListIterator;
 import java.util.Timer;
@@ -8,12 +9,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.WorldCreator;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
+
 
 /* Transitions a player into the nether via player request.
  * Requests are only permissible once per XX hours. Players
@@ -28,7 +31,7 @@ public class NetherTest extends JavaPlugin
 	SessionMonitorTask _monitorTask;
 	
 	public void onLoad()
-	{ 
+	{
 		_dbAccess = new DbAccess(getLogger()); //instantiate the db access class
 		getLogger().info("NetherTest Loaded");
 	}
@@ -36,14 +39,60 @@ public class NetherTest extends JavaPlugin
 	public void onEnable()
 	{
 		new EvtHandler(this); //instantiate the event handler class
-		
+				
 		//start the session monitor
 		_monitorTask = new SessionMonitorTask(getLogger());
 		_timer.schedule(_monitorTask, 0, Configuration.MONITOR_INTERVAL); 
 		
 		getLogger().info("NetherTest Enabled");
 	}
-	 
+	
+	public void resetNetherWorld()
+	{
+		//make a creator that has the config of the current nether world
+		WorldCreator creator = new WorldCreator(Configuration.NETHER_SERVER_NAME);
+		creator.copy(Bukkit.getWorld(Configuration.NETHER_SERVER_NAME));
+		
+		//get the folder
+		File worldFolder = Bukkit.getWorld(Configuration.NETHER_SERVER_NAME).getWorldFolder();
+
+		//unload the world
+		getLogger().info(String.format("Unload nether world successful: %b", Bukkit.getServer().unloadWorld(Configuration.NETHER_SERVER_NAME, false)));
+		
+		//avoid lame open stream bug: http://forums.bukkit.org/threads/deleting-world.47351/
+		getLogger().info(String.format("Close internal file streams for nether world successful: %b", BorrowedCode.clearWorldReference(Bukkit.getWorld(Configuration.NETHER_SERVER_NAME), this)));
+		
+		//recursively delete the world folder and files
+		deleteFolder(worldFolder);
+		
+		//did it work?
+		getLogger().info(String.format("Nether world deletion successful: %b", worldFolder.exists()));
+		
+		//generate a new world (or if delete failed it will just reload it)
+		Bukkit.getServer().createWorld(creator);
+		getLogger().info("Nether world has been reset");
+	}
+	
+	private void deleteFolder(File file)
+	{ //recursively delete folder and files. (lame java doesn't have this built in.. or at least that i could find).
+
+		//delete if we're down to a file
+		if (file.isFile())
+		{
+			file.delete();
+		}
+		else
+		{
+			//iterate over children
+			File[] files = file.listFiles();
+			for(int i = 0; i <files.length; i++)
+				deleteFolder(files[i]);
+
+			//delete this current folder now that the children have been dealt with
+			file.delete();
+		}
+	}
+	
 	public void onDisable()
 	{
 		//stop the monitor and let it GC
@@ -128,9 +177,14 @@ public class NetherTest extends JavaPlugin
 		else if (command.equals("cheat"))
 		{//because i'm lazy and didn't want to walk to find something other than bedrock :)
 			//and because i needed items to kill pig zombies to test 
-			player.getInventory().addItem(new ItemStack(Material.DIAMOND_SWORD), new ItemStack(Material.DIAMOND_CHESTPLATE), new ItemStack(Material.DIAMOND_LEGGINGS), new ItemStack(Material.DIAMOND_BOOTS), new ItemStack(Material.DIAMOND_HELMET));
+			player.getInventory().addItem(new ItemStack(Material.DIAMOND_SWORD), new ItemStack(Material.DIAMOND_CHESTPLATE), new ItemStack(Material.DIAMOND_LEGGINGS), new ItemStack(Material.DIAMOND_BOOTS), new ItemStack(Material.DIAMOND_HELMET), new ItemStack(Material.DIAMOND_PICKAXE));
 			if (player.getWorld().getName().equals(Configuration.NETHER_SERVER_NAME))
 				player.teleport(player.getWorld().getSpawnLocation());
+			return true;
+		}
+		else if (command.equals("reset"))
+		{//simple command to test function
+			resetNetherWorld();
 			return true;
 		}
 		

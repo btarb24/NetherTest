@@ -13,7 +13,8 @@ public class Configuration {
 	public static final int MONITOR_INTERVAL = 3*60*1000; 
 	
 	//name of nether world.  used it in too many places and feared typo
-	public static final String NETHER_SERVER_NAME = "world_nether";
+	//had to pick a new world name since you cannot unload a world with a default name: https://bukkit.atlassian.net/browse/BUKKIT-731
+	public static final String NETHER_SERVER_NAME = "world_nether_different_name";
 	
 	//what percent to have pigzombie drop a nugget
 	public static final int PIGZOMBIE_GOLD_DROP_PERCENT = 10; 
