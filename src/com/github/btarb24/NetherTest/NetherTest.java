@@ -73,7 +73,6 @@ public class NetherTest extends JavaPlugin
 		//load the last reset day from the config file
 		long lastResetDay = Long.parseLong(_config.getProperty("NetherWorldLastResetDay", "1"));
 		
-		getLogger().warning(String.format("max: %d .. current: %d  .. last: %d", maxDays, currentDay, lastResetDay));
 		//do we need to reset again?
 		if (currentDay - lastResetDay >= maxDays || override)
 		{
