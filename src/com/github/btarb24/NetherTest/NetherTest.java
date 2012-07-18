@@ -260,26 +260,54 @@ public class NetherTest extends JavaPlugin
 	
 	private Location getNetherSpawnLoc (World world)
 	{
-		//put you on 0,0 at the highest Y.
+		//NOTE: nether world has a bedrock ceiling that's completely flat at Y127.  need to start below this to find usable land.
+		
 		int x = 0;
 		int z = 0;
-		int y = 250;
+		int y = 100;
 		Location loc = new Location(world, x, y, z);
 		
-		//gotta be a better way to do this.  I did some googling and got nowhere.. unsure how. I would have
-		//though it would be very common to find a safe Y. My search terms likely sucked?  Anyway, not a pretty method, but functional
-		//TODO: make this better
-		while (loc.getBlock().getTypeId() == 0)
-			loc.setY(--y);
+		if (loc.getBlock().getType() == Material.AIR)
+		{//good.. we're already in air.. just move down til we hit land.
+			while (loc.getBlock().getType() == Material.AIR && y > 0)
+				loc.setY(--y);
+		}
+		else
+		{
+			//ok so we started in something other than air.. just move down until we find some air.
+			while (loc.getBlock().getType() != Material.AIR && y > 0)
+				loc.setY(--y);
+			
+			//make sure we're above 0 and then move down until we go through all the air and hit land again
+			if (y > 0)
+				while (loc.getBlock().getType() == Material.AIR && y > 0)
+					loc.setY(--y);
+		}
 		
-		//make sure it wont kill you. change to a happy place if it will
-		int block = loc.getBlockY();
-		if (block == 10 || block == 11 || block == 51)
-			loc.getBlock().setTypeId(91);
+		//ok, we have now either found land or we hit 0.. make sure it's not 0
+		if (y == 0) 
+			y = 60; //crap we never found a valid spot. just pick something in themiddle and we'll let them sort it out
 		
-		// move back up 1 block
-		loc.setY(y++);
+		buildSpawnPlatform(world, loc);
 		
 		return loc;
+	}
+	
+	private void buildSpawnPlatform(World world, Location loc)
+	{
+		// we need a 10x10 cobble platform with 10x10x10 air pocket above it.
+		
+		//first, make the platform
+		for(int x = loc.getBlockX() - 5; x < loc.getBlockX() + 5; x++)
+		{
+			for(int z = loc.getBlockZ() - 5; z < loc.getBlockZ() + 5; z++)
+			{
+				world.getBlockAt(x, loc.getBlockY(), z).setType(Material.COBBLESTONE);
+				
+				//and now make sure there's an air cube above it
+				for(int y = loc.getBlockY() +1; y < loc.getBlockY() +12; y++)
+					world.getBlockAt(x, y, z).setType(Material.AIR);
+			}
+		}
 	}
 }
