@@ -175,11 +175,14 @@ public class NetherTest extends JavaPlugin
 			return true;
 		}
 		else if (command.equals("cheat"))
-		{//because i'm lazy and didn't want to walk to find something other than bedrock :)
-			//and because i needed items to kill pig zombies to test 
-			player.getInventory().addItem(new ItemStack(Material.DIAMOND_SWORD), new ItemStack(Material.DIAMOND_CHESTPLATE), new ItemStack(Material.DIAMOND_LEGGINGS), new ItemStack(Material.DIAMOND_BOOTS), new ItemStack(Material.DIAMOND_HELMET), new ItemStack(Material.DIAMOND_PICKAXE));
-			if (player.getWorld().getName().equals(Configuration.NETHER_SERVER_NAME))
-				player.teleport(player.getWorld().getSpawnLocation());
+		{
+			//stuffs so i dont die
+			player.getInventory().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
+			player.getInventory().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
+			player.getInventory().setHelmet(new ItemStack(Material.DIAMOND_HELMET));
+			player.getInventory().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
+			player.getInventory().addItem(new ItemStack(Material.DIAMOND_SWORD), new ItemStack(Material.DIAMOND_PICKAXE), new ItemStack(Material.DIAMOND_AXE), new ItemStack(Material.DIAMOND_SPADE), new ItemStack(Material.COOKED_BEEF, 64));
+
 			return true;
 		}
 		else if (command.equals("reset"))
