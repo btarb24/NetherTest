@@ -42,20 +42,14 @@ public class EvtHandler implements Listener
 	@EventHandler
 	public void OnPlayerJoin(PlayerJoinEvent event)
 	{
-		//handling this event so that we can check if they're in the nether. If so then
-		//teleport them to main world.  
-		//positive effect.. checking info in nether will not display skewed stats
-		//negative effect.. the player will not be in the same nether location as when they logged out
 		if (event.getPlayer().getWorld().getName().equals(Configuration.NETHER_SERVER_NAME))
 		{
-			event.getPlayer().sendMessage(event.getPlayer().getWorld().getName());
 			//punt them back to main world if they are out of time but somehow were still in nether.
 			//odds of this are very low.  Teleporting them on join also causes an error and forces
 			//them back to the server select screen.  Thankfully it's a super low chance situation
 			//and that it's super easy to just double-click the server to log back in again.
 			if (! _nether.hasTimeRemaining(event.getPlayer()))
 			{
-				event.getPlayer().sendMessage("teleport");
 				event.getPlayer().teleport(Bukkit.getWorld("world").getSpawnLocation());
 			}
 		}

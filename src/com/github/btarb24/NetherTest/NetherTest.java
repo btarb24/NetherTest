@@ -57,56 +57,7 @@ public class NetherTest extends JavaPlugin
 		
 		getLogger().info("NetherTest Enabled");
 	}
-	
-	public void resetNetherWorld(boolean override)
-	{
-		//this is where the nether world file lives
-		File worldFolder = new File(".\\" + Configuration.NETHER_SERVER_NAME);
 		
-		//load from the config file so we know how many days the world shoud last
-		int maxDays = Integer.parseInt(_config.getProperty("NetherDaysUntilReset", "7"));
-		
-		//get the current day from epoch.. that num is how many ms in a day
-		Calendar now = Calendar.getInstance();
-		long currentDay = now.getTimeInMillis() / 86400000; 
-		
-		//load the last reset day from the config file
-		long lastResetDay = Long.parseLong(_config.getProperty("NetherWorldLastResetDay", "1"));
-		
-		//do we need to reset again?
-		if (currentDay - lastResetDay >= maxDays || override)
-		{
-			//yes we do.. let's recursively delete the world folder and files
-			deleteFolder(worldFolder);
-			
-			//and save the new day into the config file
-			_config.setProperty("NetherWorldLastResetDay", String.format("%d", currentDay));
-
-			//did it work?
-			getLogger().info(String.format("Nether world deletion successful: %b", worldFolder.exists()));
-		}
-	}
-	
-	private void deleteFolder(File file)
-	{ //recursively delete folder and files. (lame java doesn't have this built in.. or at least that i could find).
-
-		//delete if we're down to a file
-		if (file.isFile())
-		{
-			file.delete();
-		}
-		else
-		{
-			//iterate over children
-			File[] files = file.listFiles();
-			for(int i = 0; i <files.length; i++)
-				deleteFolder(files[i]);
-
-			//delete this current folder now that the children have been dealt with
-			file.delete();
-		}
-	}
-	
 	public void onDisable()
 	{
 		//stop the monitor and let it GC
@@ -199,11 +150,6 @@ public class NetherTest extends JavaPlugin
 
 			return true;
 		}
-		else if (command.equals("reset"))
-		{//simple command to test function
-			resetNetherWorld(true);
-			return true;
-		}
 		
 		//default fall through to print out the usage
 		return false; 
@@ -234,6 +180,55 @@ public class NetherTest extends JavaPlugin
 			return _dbAccess.canEnter(player);
 		} catch (SQLException e) {
 			return false;  //just punt them back to main world if there was an error
+		}
+	}
+
+	private void resetNetherWorld(boolean override)
+	{
+		//this is where the nether world file lives
+		File worldFolder = new File(".\\" + Configuration.NETHER_SERVER_NAME);
+		
+		//load from the config file so we know how many days the world shoud last
+		int maxDays = Integer.parseInt(_config.getProperty("NetherDaysUntilReset", "7"));
+		
+		//get the current day from epoch.. that num is how many ms in a day
+		Calendar now = Calendar.getInstance();
+		long currentDay = now.getTimeInMillis() / 86400000; 
+		
+		//load the last reset day from the config file
+		long lastResetDay = Long.parseLong(_config.getProperty("NetherWorldLastResetDay", "1"));
+		
+		//do we need to reset again?
+		if (currentDay - lastResetDay >= maxDays || override)
+		{
+			//yes we do.. let's recursively delete the world folder and files
+			deleteFolder(worldFolder);
+			
+			//and save the new day into the config file
+			_config.setProperty("NetherWorldLastResetDay", String.format("%d", currentDay));
+
+			//did it work?
+			getLogger().info(String.format("Nether world deletion successful: %b", worldFolder.exists()));
+		}
+	}
+	
+	private void deleteFolder(File file)
+	{ //recursively delete folder and files. (lame java doesn't have this built in.. or at least that i could find).
+
+		//delete if we're down to a file
+		if (file.isFile())
+		{
+			file.delete();
+		}
+		else
+		{
+			//iterate over children
+			File[] files = file.listFiles();
+			for(int i = 0; i <files.length; i++)
+				deleteFolder(files[i]);
+
+			//delete this current folder now that the children have been dealt with
+			file.delete();
 		}
 	}
 	
