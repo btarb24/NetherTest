@@ -129,14 +129,9 @@ public class NetherCommand implements CommandExecutor {
 			{
 				//make sure the user has access to view other peoples stats
 				if (sender.hasPermission("Deity.nether.override"))
-				{
 					_dbAccess.outputInfo(sender, args[1]);
-				}
 				else //deny them access.  only allow admins to check other players stats
-				{
 					sender.sendMessage("You do not have permissions to view another player's nether info.");
-					return true;
-				}
 			}
 			
 			return true;
@@ -159,6 +154,7 @@ public class NetherCommand implements CommandExecutor {
 			if (subCommand.equals("help") || subCommand.equals("?"))
 			{
 				outputUsageAdmin(sender);
+				return true;
 			}
 			else if (subCommand.equals("list") || subCommand.equals("info"))
 			{//sends to either console or player
@@ -170,6 +166,7 @@ public class NetherCommand implements CommandExecutor {
 				messages.add(String.format("(admin monitor ##) MS rate to check players: %s", _config.getProperty(Keys.MONITOR_INTERVAL)));
 				messages.add(String.format("(admin goldPercent ##) %% that gold nuggets drop: %s", _config.getProperty(Keys.PIGZOMBIE_GOLD_DROP_PERCENT)));
 				sender.sendMessage(messages.toArray(new String[messages.size()]));
+				return true;
 			}
 			else if (subCommand.equals("clear"))
 			{//clear the session information for a specific user
@@ -184,6 +181,7 @@ public class NetherCommand implements CommandExecutor {
 				{
 					outputUsageAdmin(sender);
 				}
+				return true;
 			}
 			else if (subCommand.equals("worldreset"))
 			{
