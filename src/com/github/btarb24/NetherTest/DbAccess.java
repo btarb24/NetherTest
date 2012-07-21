@@ -19,7 +19,24 @@ public class DbAccess
 		
 		initDbConnection();
 	}
-	
+
+	public void constructTable()
+	{
+		try {
+			//exure table exists in db
+			String sql = "CREATE TABLE IF NOT EXISTS`activity` (" + 
+							"`name` varchar(45) NOT NULL," +
+							"`lastActivity` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+							"`minutesUsed` int(11) NOT NULL DEFAULT '0'," +
+							"PRIMARY KEY (`name`)," +
+							"UNIQUE KEY `name_UNIQUE` (`name`)" +
+							") ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='log of last activity (enter/exit) and how many minutes were used'";
+			_statement.executeUpdate(sql);
+		} catch (SQLException e) {
+			_logger.severe(String.format("Failed to check if table exists or create it.. likely DB connection issue -- %s", e.getMessage()));
+		}
+	}
+
 	public void initDbConnection()
 	{
 		try {
@@ -35,6 +52,9 @@ public class DbAccess
 			//init the statement if it is null or closed
 			if (_statement == null || _statement.isClosed())
 				_statement = _connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+			
+			//ensure the activity table exists in the db
+			constructTable();
 		}
 		catch (ClassNotFoundException e) { _logger.severe(e.getMessage()); }
 		catch (SQLException e) {  _logger.severe(e.getMessage()); }
