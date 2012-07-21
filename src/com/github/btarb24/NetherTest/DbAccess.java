@@ -149,6 +149,10 @@ public class DbAccess
 	
 	public boolean surpassedLimit (Player player) throws SQLException
 	{
+		//override has no limit
+		if (player.hasPermission("Deity.nether.override"))
+			return false;
+		
 		//get their record
 		ResultSet rs = retrieveRecord(player.getName());
 
