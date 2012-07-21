@@ -75,15 +75,29 @@ public class EvtHandler implements Listener
 					break; //exit the for loop
 				}
 			}
+			
+			//get the drop percent from the config
+			int dropPercent = _config.getPropertyInt(Configuration.Keys.PIGZOMBIE_GOLD_DROP_PERCENT);
 
-			//get a random number 0-99		
-			int rand = new Random().nextInt(100); 
-
-			//give a nugget if it is within the configured drop percent
-			if (rand < _config.getPropertyInt(Configuration.Keys.PIGZOMBIE_GOLD_DROP_PERCENT)) 
-			{ //Give nugget  (yes, this will double up loot.. that's the downfall of not modifying the real loot table)
-				event.getDrops().add(new ItemStack(Material.GOLD_NUGGET));
-				_nether.getLogger().info(String.format("added nugget", rand));
+			//see if they are to get any gold at all
+			if (dropPercent > 0)
+			{
+				//get a random number 0-99		
+				int rand = new Random().nextInt(100); 
+					
+				//if the percent is higher than 100 then give the user the guaranteed ones
+				if (dropPercent >= 100)
+				{
+					int guaranteed = (int) Math.floor(dropPercent / 100);
+					dropPercent = dropPercent - (guaranteed * 100);
+					event.getDrops().add(new ItemStack(Material.GOLD_NUGGET, guaranteed));
+				}
+				
+				//give an additional nugget if it is within the configured drop percent
+				if (dropPercent > 0 && rand < dropPercent) 
+				{ //Give nugget  (yes, this will double up loot.. that's the downfall of not modifying the real loot table)
+					event.getDrops().add(new ItemStack(Material.GOLD_NUGGET));
+				}
 			}
 			
 			//check if list is now empty  (this will happen if loot was 1 nugget and we removed it)

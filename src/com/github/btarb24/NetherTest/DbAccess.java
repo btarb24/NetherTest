@@ -5,6 +5,8 @@ import java.util.Date;
 import java.util.logging.Logger;
 import java.sql.*;
 
+import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 public class DbAccess 
@@ -68,12 +70,16 @@ public class DbAccess
 	 */
 	public boolean canEnter(Player player) throws SQLException
 	{
+		//always allow admins
+		if (player.hasPermission("Deity.nether.override"))
+			return true;
+		
 		initDbConnection(); //re-init the connection in case there is a problem
 		
 		//TODO: check and/or disable use of /chest?
 		
 		//get the player's record from the db
-		ResultSet rs = retrieveRecord(player);
+		ResultSet rs = retrieveRecord(player.getName());
 		
 		//get the last activity time
 		Calendar cal = getTimestampFromDb(rs);
@@ -144,7 +150,7 @@ public class DbAccess
 	public boolean surpassedLimit (Player player) throws SQLException
 	{
 		//get their record
-		ResultSet rs = retrieveRecord(player);
+		ResultSet rs = retrieveRecord(player.getName());
 
 		//get the last activity time
 		Calendar cal = getTimestampFromDb(rs);
@@ -169,7 +175,7 @@ public class DbAccess
 	{		
 		ResultSet rs = null;
 		try {
-			rs = retrieveRecord(player);
+			rs = retrieveRecord(player.getName());
 
 			//get the last activity time
 			Calendar cal = getTimestampFromDb(rs);
@@ -207,12 +213,12 @@ public class DbAccess
 		}
 	}
 	
-	public void outputInfo(Player player)
+	public void outputInfo(CommandSender sender, String playername)
 	{
 		ResultSet rs = null;
 		
 		try {
-			rs = retrieveRecord(player);
+			rs = retrieveRecord(playername);
 
 			//get the last activity time
 			Calendar cal = getTimestampFromDb(rs);
@@ -220,7 +226,8 @@ public class DbAccess
 
 			//if they're currently in the nether then count those minutes since they entered the world.
 			int currentNetherMins = 0;
-			if (player.getWorld().getName().equals(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME)))
+			Player player = Bukkit.getPlayerExact(playername);
+			if (player != null && player.getWorld().getName().equals(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME)))
 			{
 				currentNetherMins = getMinuteDiff(currentTime, cal);
 				if (currentNetherMins < 0)
@@ -242,8 +249,9 @@ public class DbAccess
 				if (calcMin == 60) //having a value of 60 minutes is silly
 					calcMin = 0;
 				
-				player.sendMessage(String.format(
-						"You've used %d of your %s minutes within a %s hour period. Your minutes will refresh if you do not re-enter the nether for %d hours %d minutes.",
+				sender.sendMessage(String.format(
+						"%s used %d of %s minutes within a %s hour period. The minutes will refresh if the nether isn't re-entered for %d hours %d minutes.",
+						playername,
 						previousMinutes + currentNetherMins,
 						_config.getProperty(Configuration.Keys.MAX_SESSION_LENGTH),
 						_config.getProperty(Configuration.Keys.ENTRANCE_FREQUENCY),
@@ -252,11 +260,11 @@ public class DbAccess
 			}
 			else //all minute available.
 			{
-				player.sendMessage(String.format("You have all %s of your minutes available.", _config.getProperty(Configuration.Keys.MAX_SESSION_LENGTH)));;
+				sender.sendMessage(String.format("%s has all %s minutes available.", playername,  _config.getProperty(Configuration.Keys.MAX_SESSION_LENGTH)));;
 			}
 		} 
 		catch (SQLException e) {
-			player.sendMessage("Sorry, an error occurred while pulling up your details. Please try again later.");
+			sender.sendMessage("Sorry, an error occurred while pulling up your details. Please try again later.");
 			initDbConnection(); //re-init the connection in case there is a problem
 		}
 		
@@ -267,14 +275,14 @@ public class DbAccess
 		}
 	}
 
-	public void EndNetherSession(Player player)
+	public void endNetherSession(Player player)
 	{//Player needs their session minutes persisted and timestamp updated.
 
 		ResultSet rs = null;
 		
 		try {
 			//get their record
-			rs = retrieveRecord(player);
+			rs = retrieveRecord(player.getName());
 
 			//set time to now
 			updateTimestamp(rs);
@@ -297,17 +305,44 @@ public class DbAccess
 		}
 	}
 	
-	private ResultSet retrieveRecord(Player player) throws SQLException
+	public boolean clearSessionInfo(String playerName)
+	{
+		boolean success = false;
+		ResultSet rs = null;
+		
+		try {
+			//get their record
+			rs = retrieveRecord(playerName);
+			
+			rs.deleteRow(); //delete the user record to effectively clear their session info
+			success = true; //ok, the update completed
+		} 
+		catch (SQLException e) {
+			_logger.warning("Hmm, i couldn't persist a session clear to the db?  -- " + e.getMessage());
+			initDbConnection(); //re-init the connection in case there is a problem
+		}
+		
+		//cleanup //don't let it throw if we only have the exception on cleanup!
+		if (rs != null)
+		{
+			try { rs.close(); } catch (SQLException e) { }
+		}
+		
+		//return the answer so we know if we have to show a message to the caller or not
+		return success;
+	}
+	
+	private ResultSet retrieveRecord(String playername) throws SQLException
 	{
 		//build query and execute it
-		String query = String.format("SELECT * FROM activity WHERE name = '%s'", player.getName());
+		String query = String.format("SELECT * FROM activity WHERE name = '%s'", playername);
 		ResultSet rs = _statement.executeQuery(query);	
 		
 		//move to first record if there is one
 		if (! rs.next())
 		{//they don't have a record yet.. make one so we can return it
 			rs.moveToInsertRow();//move to insert row
-			rs.updateString(_config.getProperty(Configuration.Keys.DB_FIELD_NAME), player.getName()); //make a record (other fields are auto-pop)
+			rs.updateString(_config.getProperty(Configuration.Keys.DB_FIELD_NAME), playername); //make a record (other fields are auto-pop)
 			rs.insertRow(); //persist into result set and into db
 			rs.absolute(1); //move it to the first row (now that we have one)
 		}

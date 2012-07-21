@@ -5,19 +5,3 @@ load: STARTUP
 commands:
    nether:
       description: Enter the nether world
-      permission: Deity.nether.general
-      permission-message: You don't have <permission>
-      usage: |
-           /<command> enter - Enter the nether world
-           /<command> exit - Exit the nether world
-           /<command> info - Show time remaining and when session expires
-permissions:
-   Deity.nether.general:
-      description: Typical time-restricted access to nether
-      default: true
-   Deity.nether.override:
-      description: unlimited access to nether
-      default: false
-      children:
-         Deity.nether.general: true
-   

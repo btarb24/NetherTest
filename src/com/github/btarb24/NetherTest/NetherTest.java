@@ -10,12 +10,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import com.github.btarb24.NetherTest.cmds.NetherCommand;
 
 
 /* Transitions a player into the nether via player request.
@@ -27,9 +27,9 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class NetherTest extends JavaPlugin 
 { 
 	private DbAccess _dbAccess = null;
-	Timer _timer = new Timer("SessionMonitor");
-	SessionMonitorTask _monitorTask;
-	Configuration _config;
+	private Timer _timer = new Timer("SessionMonitor");
+	private SessionMonitorTask _monitorTask;
+	private Configuration _config;
 	
 	public void onLoad()
 	{
@@ -55,6 +55,8 @@ public class NetherTest extends JavaPlugin
 		_monitorTask = new SessionMonitorTask(getLogger(), _config);
 		_timer.schedule(_monitorTask, 0, _config.getPropertyLong(Configuration.Keys.MONITOR_INTERVAL)); 
 		
+		getCommand("nether").setExecutor(new NetherCommand(this, _dbAccess, _config));
+		
 		getLogger().info("NetherTest Enabled");
 	}
 		
@@ -67,99 +69,11 @@ public class NetherTest extends JavaPlugin
 		getLogger().info("NetherTest Disabled");
 	}
 	
-	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args)
-	{	
-		//ignore commands that do not begin with nether
-		if (!cmd.getName().equalsIgnoreCase("nether"))
-			return false;
-
-		if (args.length == 0)
-			return false; //return usage
-
-		//the commands that have been coded are not valid for console access.. thus deny it
-		Player player = null;
-		if (sender instanceof Player)
-			player = (Player) sender;
-		else
-			return true;
-		
-		//EVALUTE COMMANDS
-		String command = args[0].toLowerCase();
-		
-		if(command.equals("enter"))
-		{ //enter the nether world if permission is granted.
-			//make sure they're not already in the nether. ignore them if they're dumb
-			if (player.getWorld().getName().equals(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME)))
-			{
-				player.sendMessage("You're already in the Nether.");
-				return true;
-			}	
-			
-			try
-			{//make sure they have time left and they have a valid inventory
-				if (!isInventoryValid(player) || !_dbAccess.canEnter(player))
-					return true; //access denied. message to player already sent
-			}
-			catch (SQLException e)
-			{ //exception occurred. consider it a failed attempt.  try once more before giving up
-				_dbAccess.initDbConnection(); //re-init the connection in case there is a problem
-				try
-				{
-					if (! _dbAccess.canEnter(player))
-						return true; //access denied. message to player already sent
-				}
-				catch (SQLException ex)
-				{ //exception occurred again. Just display an error and give up
-					player.sendMessage("An error occurred.  We cannot send you to the nether right now. Please wait and try again later.");
-					
-					getLogger().info(ex.getMessage());
-					return true;
-				}
-			}
-			
-			//if we made it here then we can send them to the nether.
-			player.teleport(getNetherSpawnLoc(Bukkit.getWorld(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME))));
-			return true;
-		}
-		else if(command.equals("exit"))
-		{
-			//make sure we're in the nether before porting/db modification
-			if (player.getWorld().getName().equals(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME)))
-			{
-				player.teleport(Bukkit.getWorld("world").getSpawnLocation());
-				_dbAccess.exitNether(player);
-			}
-			else
-				player.sendMessage("You must be in the nether world to be able to exit it O.o");
-			
-			return true;
-		}
-		else if (command.equals("info"))
-		{//output how much time they have left and how long to wait
-			_dbAccess.outputInfo(player);
-			return true;
-		}
-		else if (command.equals("cheat"))
-		{
-			//stuffs so i dont die
-			player.getInventory().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
-			player.getInventory().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
-			player.getInventory().setHelmet(new ItemStack(Material.DIAMOND_HELMET));
-			player.getInventory().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
-			player.getInventory().addItem(new ItemStack(Material.DIAMOND_SWORD), new ItemStack(Material.DIAMOND_PICKAXE), new ItemStack(Material.DIAMOND_AXE), new ItemStack(Material.DIAMOND_SPADE), new ItemStack(Material.COOKED_BEEF, 64));
-
-			return true;
-		}
-		
-		//default fall through to print out the usage
-		return false; 
-	}
-	
 	public void endNetherSession(Player player)
 	{//Player needs their session minutes maxed out so that they can't join until time expires
 		
 		//max out their minutes in the db so they can't rejoin
-		_dbAccess.EndNetherSession(player);
+		_dbAccess.endNetherSession(player);
 		player.teleport(Bukkit.getWorld("world").getSpawnLocation()); //send them back to main world
 		player.sendMessage(String.format("You died in the Nether. You may not re-enter for another %d hours.", _config.getPropertyInt(Configuration.Keys.ENTRANCE_FREQUENCY)));
 	}
@@ -183,13 +97,17 @@ public class NetherTest extends JavaPlugin
 		}
 	}
 
-	private void resetNetherWorld(boolean override)
+	public void resetNetherWorld(boolean override)
 	{
 		//this is where the nether world file lives
 		File worldFolder = new File(".\\" + _config.getProperty(Configuration.Keys.NETHER_SERVER_NAME));
 		
 		//load from the config file so we know how many days the world shoud last
 		int maxDays = _config.getPropertyInt(Configuration.Keys.DAYS_UNTIL_NETHER_RESET);
+		
+		//check if world reset is disabled
+		if (maxDays == 0)
+			return;
 		
 		//get the current day from epoch.. that num is how many ms in a day
 		Calendar now = Calendar.getInstance();
@@ -237,8 +155,12 @@ public class NetherTest extends JavaPlugin
 		}
 	}
 	
-	private boolean isInventoryValid(Player player)
+	public boolean isInventoryValid(Player player)
 	{
+		//always allow admins
+		if (player.hasPermission("Deity.nether.override"))
+			return true;
+		
 		//get their inventory
 		PlayerInventory inv = player.getInventory();
 		
@@ -275,7 +197,7 @@ public class NetherTest extends JavaPlugin
 		return true;
 	}
 	
-	private Location getNetherSpawnLoc (World world)
+	public Location getNetherSpawnLoc (World world)
 	{
 		//NOTE: nether world has a bedrock ceiling that's completely flat at Y127.  need to start below this to find usable land.
 		

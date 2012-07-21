@@ -46,7 +46,7 @@ public class SessionMonitorTask extends TimerTask
 				if (_dbAccess.surpassedLimit(player))
 				{
 					//persist new db values
-					_dbAccess.EndNetherSession(player);
+					_dbAccess.endNetherSession(player);
 					
 					//punt them to main world
 					player.teleport(Bukkit.getWorld("world").getSpawnLocation());
