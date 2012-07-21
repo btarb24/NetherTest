@@ -13,18 +13,20 @@ public class SessionMonitorTask extends TimerTask
 {
 	
 	private DbAccess _dbAccess;
+	private Configuration _config;
 
-	public SessionMonitorTask(Logger logger)
+	public SessionMonitorTask(Logger logger, Configuration config)
 	{
 		//make a new instance of dbaccess so that we get a new connection. Otherwise we're not thread safe
-		_dbAccess =  new DbAccess(logger);
+		_config = config;
+		_dbAccess =  new DbAccess(logger, config);
 	}
 	
 	@Override
 	public void run() 
 	{
 		//get the nether world
-		World world = Bukkit.getWorld(Configuration.NETHER_SERVER_NAME);
+		World world = Bukkit.getWorld(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME));
 		
 		//sanity  (world may not be loaded yet if plugin just started)
 		if (world == null)
@@ -50,7 +52,7 @@ public class SessionMonitorTask extends TimerTask
 					player.teleport(Bukkit.getWorld("world").getSpawnLocation());
 					
 					//tell them why
-					player.sendMessage(String.format("You've used all your Nether minutes. You may re-enter in %d hours", Configuration.ENTRANCE_FREQUENCY));					
+					player.sendMessage(String.format("You've used all your Nether minutes. You may re-enter in %s hours", _config.getProperty(Configuration.Keys.ENTRANCE_FREQUENCY)));					
 				}
 			}
 			catch (SQLException e) 

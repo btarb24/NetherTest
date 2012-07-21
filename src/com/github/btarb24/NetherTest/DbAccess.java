@@ -12,10 +12,12 @@ public class DbAccess
 	private Connection _connection = null; //the mysql db connection
 	private Statement _statement = null;   //the db statement to reuse
 	private Logger _logger = null;         //logger from the main class
+	private Configuration _config = null;
 	
-	public DbAccess(Logger logger)
+	public DbAccess(Logger logger, Configuration config)
 	{
 		_logger = logger;
+		_config = config;
 		
 		initDbConnection();
 	}
@@ -45,7 +47,7 @@ public class DbAccess
 			//init the connection if it is null or closed
 			if (_connection == null || _connection.isClosed())
 			{
-				_connection = DriverManager.getConnection (Configuration.DB_URL);
+				_connection = DriverManager.getConnection (_config.getProperty(Configuration.Keys.DB_URL));
 				_statement = null;
 			}
 			
@@ -77,7 +79,7 @@ public class DbAccess
 		Calendar cal = getTimestampFromDb(rs);
 		
 		//add the max frequency to the last activity time
-		cal.add(Calendar.HOUR, Configuration.ENTRANCE_FREQUENCY);
+		cal.add(Calendar.HOUR, _config.getPropertyInt(Configuration.Keys.ENTRANCE_FREQUENCY));
 		Calendar currentTime = Calendar.getInstance(); 
 		
 		//amount of minutes they've used (only loaded if they're still within the a session group)
@@ -87,7 +89,7 @@ public class DbAccess
 		{//the user gets to start a completely new set of sessions
 			
 			//reset minutes used to 0 since they're just starting a new session group
-			rs.updateInt(Configuration.DB_MINS, 0);
+			rs.updateInt(_config.getProperty(Configuration.Keys.DB_FIELD_MINS), 0);
 			//update lastActivity to the current time
 			updateTimestamp(rs);
 			
@@ -99,10 +101,10 @@ public class DbAccess
 			//the user is still in a prior session
 			
 			//get the minutes used within this session.
-			minutes = rs.getInt(Configuration.DB_MINS);
+			minutes = rs.getInt(_config.getProperty(Configuration.Keys.DB_FIELD_MINS));
 			
 			//they've used too many minutes.. throw up an error and fail out
-			if (minutes > Configuration.MAX_SESSION_LENGTH)
+			if (minutes > _config.getPropertyInt(Configuration.Keys.MAX_SESSION_LENGTH))
 			{
 				//calc how long until they can try again
 				int calcMin =  getMinuteDiff(cal, currentTime);
@@ -113,7 +115,7 @@ public class DbAccess
 					calcMin = 0;
 				
 				//output the informational error message
-				player.sendMessage(String.format("You've exceeded the %d minute maximum per %d hours", Configuration.MAX_SESSION_LENGTH, Configuration.ENTRANCE_FREQUENCY));
+				player.sendMessage(String.format("You've exceeded the %s minute maximum per %s hours", _config.getProperty(Configuration.Keys.MAX_SESSION_LENGTH), _config.getProperty(Configuration.Keys.ENTRANCE_FREQUENCY)));
 				player.sendMessage(String.format("Please wait %d hours %d minutes to try again", calcHour, calcMin) );
 				return false;
 			}
@@ -128,7 +130,7 @@ public class DbAccess
 		}
 		
 		//Permission granted! inform them of how many minutes they have left
-		player.sendMessage(String.format("Welcome to the Nether World. You have %d minutes left.", Configuration.MAX_SESSION_LENGTH - minutes));
+		player.sendMessage(String.format("Welcome to the Nether World. You have %d minutes left.", _config.getPropertyInt(Configuration.Keys.MAX_SESSION_LENGTH) - minutes));
 		
 		//cleanup //don't let it throw if we only have the exception on cleanup!
 		if (rs != null)
@@ -154,13 +156,13 @@ public class DbAccess
 		int minutesSpent = getAbsoluteMinuteDiff(currentTime, cal);
 					
 		//how many minutes were previously spent in nether
-		int previousMinutes = rs.getInt(Configuration.DB_MINS);
+		int previousMinutes = rs.getInt(_config.getProperty(Configuration.Keys.DB_FIELD_MINS));
 		
 		//add it and save it to the db
 		int totalMinutes = minutesSpent + previousMinutes;
 		
 		//did they exceed?
-		return totalMinutes > Configuration.MAX_SESSION_LENGTH;
+		return totalMinutes > _config.getPropertyInt(Configuration.Keys.MAX_SESSION_LENGTH);
 	}
 	
 	public void exitNether(Player player)
@@ -179,11 +181,11 @@ public class DbAccess
 			int minutesSpent = getAbsoluteMinuteDiff(currentTime, cal);
 						
 			//how many minutes were previously spent in nether
-			int previousMinutes = rs.getInt(Configuration.DB_MINS);
+			int previousMinutes = rs.getInt(_config.getProperty(Configuration.Keys.DB_FIELD_MINS));
 			
 			//add it and save it to the db
 			int totalMinutes = minutesSpent + previousMinutes;
-			rs.updateInt(Configuration.DB_MINS, totalMinutes);
+			rs.updateInt(_config.getProperty(Configuration.Keys.DB_FIELD_MINS), totalMinutes);
 			
 			//and update the last activity time
 			updateTimestamp(rs);
@@ -191,7 +193,7 @@ public class DbAccess
 			//push the changes to the db
 			rs.updateRow();	
 
-			player.sendMessage(String.format("You just spent %d minutes in Nether and a total of %d. The limit is %d.", minutesSpent, totalMinutes, Configuration.MAX_SESSION_LENGTH));
+			player.sendMessage(String.format("You just spent %d minutes in Nether and a total of %d. The limit is %s.", minutesSpent, totalMinutes, _config.getProperty(Configuration.Keys.MAX_SESSION_LENGTH)));
 			
 		} catch (SQLException e) {
 			_logger.warning("Couldn't access db to exit nether. -- " + e.getMessage());
@@ -218,7 +220,7 @@ public class DbAccess
 
 			//if they're currently in the nether then count those minutes since they entered the world.
 			int currentNetherMins = 0;
-			if (player.getWorld().getName().equals(Configuration.NETHER_SERVER_NAME))
+			if (player.getWorld().getName().equals(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME)))
 			{
 				currentNetherMins = getMinuteDiff(currentTime, cal);
 				if (currentNetherMins < 0)
@@ -226,11 +228,11 @@ public class DbAccess
 			}
 			
 			//check if their max session time has reset or not so we know which msg to show
-			cal.add(Calendar.HOUR, Configuration.ENTRANCE_FREQUENCY);
+			cal.add(Calendar.HOUR, _config.getPropertyInt(Configuration.Keys.ENTRANCE_FREQUENCY));
 			if (cal.after(currentTime))
 			{	
 				//how many minutes were previously spent in nether
-				int previousMinutes = rs.getInt(Configuration.DB_MINS);
+				int previousMinutes = rs.getInt(_config.getProperty(Configuration.Keys.DB_FIELD_MINS));
 				
 				//calc how long until they can try again
 				int calcMin =  getMinuteDiff(cal, currentTime);
@@ -241,16 +243,16 @@ public class DbAccess
 					calcMin = 0;
 				
 				player.sendMessage(String.format(
-						"You've used %d of your %d minutes within a %d hour period. Your minutes will refresh if you do not re-enter the nether for %d hours %d minutes.",
+						"You've used %d of your %s minutes within a %s hour period. Your minutes will refresh if you do not re-enter the nether for %d hours %d minutes.",
 						previousMinutes + currentNetherMins,
-						Configuration.MAX_SESSION_LENGTH,
-						Configuration.ENTRANCE_FREQUENCY,
+						_config.getProperty(Configuration.Keys.MAX_SESSION_LENGTH),
+						_config.getProperty(Configuration.Keys.ENTRANCE_FREQUENCY),
 						calcHour,
 						calcMin));
 			}
 			else //all minute available.
 			{
-				player.sendMessage(String.format("You have all %d of your minutes available.", Configuration.MAX_SESSION_LENGTH));;
+				player.sendMessage(String.format("You have all %s of your minutes available.", _config.getProperty(Configuration.Keys.MAX_SESSION_LENGTH)));;
 			}
 		} 
 		catch (SQLException e) {
@@ -278,7 +280,7 @@ public class DbAccess
 			updateTimestamp(rs);
 
 			//max minutes
-			rs.updateInt(Configuration.DB_MINS, Configuration.MAX_SESSION_LENGTH);
+			rs.updateInt(_config.getProperty(Configuration.Keys.DB_FIELD_MINS), _config.getPropertyInt(Configuration.Keys.MAX_SESSION_LENGTH));
 
 			//push the changes to the db
 			rs.updateRow();	
@@ -305,7 +307,7 @@ public class DbAccess
 		if (! rs.next())
 		{//they don't have a record yet.. make one so we can return it
 			rs.moveToInsertRow();//move to insert row
-			rs.updateString(Configuration.DB_NAME, player.getName()); //make a record (other fields are auto-pop)
+			rs.updateString(_config.getProperty(Configuration.Keys.DB_FIELD_NAME), player.getName()); //make a record (other fields are auto-pop)
 			rs.insertRow(); //persist into result set and into db
 			rs.absolute(1); //move it to the first row (now that we have one)
 		}
@@ -369,7 +371,7 @@ public class DbAccess
 		Calendar cal = Calendar.getInstance();
 		
 		//get the val from db
-		Timestamp dbTime = rs.getTimestamp(Configuration.DB_TIME, cal);
+		Timestamp dbTime = rs.getTimestamp(_config.getProperty(Configuration.Keys.DB_FIELD_TIME), cal);
 		
 		//push it into the cal
 		cal.setTime(dbTime);
@@ -386,7 +388,7 @@ public class DbAccess
 		Timestamp ts = new Timestamp(t);
 		
 		//update it in the result set (doesn't push to db until you call update row)
-		rs.updateTimestamp(Configuration.DB_TIME, ts);
+		rs.updateTimestamp(_config.getProperty(Configuration.Keys.DB_FIELD_TIME), ts);
 	}
 		
 	protected void finalize()

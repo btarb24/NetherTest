@@ -33,14 +33,14 @@ public class NetherTest extends JavaPlugin
 	
 	public void onLoad()
 	{
-		_dbAccess = new DbAccess(getLogger()); //instantiate the db access class
-		
 		//load the config file
 		try {
 			_config = new Configuration();
 		} catch (Exception e) {
 			getLogger().warning("Failed to load config file.  -- " + e.toString());
 		}
+		
+		_dbAccess = new DbAccess(getLogger(), _config); //instantiate the db access class
 		
 		getLogger().info("NetherTest Loaded");
 	}
@@ -49,11 +49,11 @@ public class NetherTest extends JavaPlugin
 	{
 		resetNetherWorld(false);
 		
-		new EvtHandler(this); //instantiate the event handler class
+		new EvtHandler(this, _config); //instantiate the event handler class
 				
 		//start the session monitor
-		_monitorTask = new SessionMonitorTask(getLogger());
-		_timer.schedule(_monitorTask, 0, Configuration.MONITOR_INTERVAL); 
+		_monitorTask = new SessionMonitorTask(getLogger(), _config);
+		_timer.schedule(_monitorTask, 0, _config.getPropertyLong(Configuration.Keys.MONITOR_INTERVAL)); 
 		
 		getLogger().info("NetherTest Enabled");
 	}
@@ -89,7 +89,7 @@ public class NetherTest extends JavaPlugin
 		if(command.equals("enter"))
 		{ //enter the nether world if permission is granted.
 			//make sure they're not already in the nether. ignore them if they're dumb
-			if (player.getWorld().getName().equals(Configuration.NETHER_SERVER_NAME))
+			if (player.getWorld().getName().equals(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME)))
 			{
 				player.sendMessage("You're already in the Nether.");
 				return true;
@@ -118,13 +118,13 @@ public class NetherTest extends JavaPlugin
 			}
 			
 			//if we made it here then we can send them to the nether.
-			player.teleport(getNetherSpawnLoc(Bukkit.getWorld(Configuration.NETHER_SERVER_NAME)));
+			player.teleport(getNetherSpawnLoc(Bukkit.getWorld(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME))));
 			return true;
 		}
 		else if(command.equals("exit"))
 		{
 			//make sure we're in the nether before porting/db modification
-			if (player.getWorld().getName().equals(Configuration.NETHER_SERVER_NAME))
+			if (player.getWorld().getName().equals(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME)))
 			{
 				player.teleport(Bukkit.getWorld("world").getSpawnLocation());
 				_dbAccess.exitNether(player);
@@ -161,7 +161,7 @@ public class NetherTest extends JavaPlugin
 		//max out their minutes in the db so they can't rejoin
 		_dbAccess.EndNetherSession(player);
 		player.teleport(Bukkit.getWorld("world").getSpawnLocation()); //send them back to main world
-		player.sendMessage(String.format("You died in the Nether. You may not re-enter for another %d hours.", Configuration.ENTRANCE_FREQUENCY ));
+		player.sendMessage(String.format("You died in the Nether. You may not re-enter for another %d hours.", _config.getPropertyInt(Configuration.Keys.ENTRANCE_FREQUENCY)));
 	}
 	
 	public void logoutWhileInNether(Player player)
@@ -186,17 +186,17 @@ public class NetherTest extends JavaPlugin
 	private void resetNetherWorld(boolean override)
 	{
 		//this is where the nether world file lives
-		File worldFolder = new File(".\\" + Configuration.NETHER_SERVER_NAME);
+		File worldFolder = new File(".\\" + _config.getProperty(Configuration.Keys.NETHER_SERVER_NAME));
 		
 		//load from the config file so we know how many days the world shoud last
-		int maxDays = Integer.parseInt(_config.getProperty("NetherDaysUntilReset", "7"));
+		int maxDays = _config.getPropertyInt(Configuration.Keys.DAYS_UNTIL_NETHER_RESET);
 		
 		//get the current day from epoch.. that num is how many ms in a day
 		Calendar now = Calendar.getInstance();
 		long currentDay = now.getTimeInMillis() / 86400000; 
 		
 		//load the last reset day from the config file
-		long lastResetDay = Long.parseLong(_config.getProperty("NetherWorldLastResetDay", "1"));
+		long lastResetDay = _config.getPropertyLong(Configuration.Keys.LAST_RESET_DAY);
 		
 		//do we need to reset again?
 		if (currentDay - lastResetDay >= maxDays || override)
@@ -205,7 +205,7 @@ public class NetherTest extends JavaPlugin
 			deleteFolder(worldFolder);
 			
 			//and save the new day into the config file
-			_config.setProperty("NetherWorldLastResetDay", String.format("%d", currentDay));
+			_config.setProperty(Configuration.Keys.LAST_RESET_DAY, String.format("%d", currentDay));
 
 			//did it work?
 			getLogger().info(String.format("Nether world deletion successful: %b", worldFolder.exists()));
@@ -228,8 +228,9 @@ public class NetherTest extends JavaPlugin
 		{
 			//iterate over children
 			File[] files = file.listFiles();
-			for(int i = 0; i <files.length; i++)
-				deleteFolder(files[i]);
+			if (files != null && files.length > 0)
+				for(int i = 0; i <files.length; i++)
+					deleteFolder(files[i]);
 
 			//delete this current folder now that the children have been dealt with
 			file.delete();

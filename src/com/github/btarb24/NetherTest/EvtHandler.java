@@ -16,8 +16,10 @@ import org.bukkit.inventory.ItemStack;
 public class EvtHandler implements Listener
 {
 	NetherTest _nether;
-	public EvtHandler(NetherTest nether)
+	Configuration _config;
+	public EvtHandler(NetherTest nether, Configuration config)
 	{
+		_config = config;
 		nether.getServer().getPluginManager().registerEvents(this, nether);
 		_nether = nether; 
 	}
@@ -27,7 +29,7 @@ public class EvtHandler implements Listener
 	{
 		//check if they were in the nether.  kill their session if they were. 
 		//they will respawn in main world and not be able to get back in nether
-		if (event.getEntity().getWorld().getName().equalsIgnoreCase(Configuration.NETHER_SERVER_NAME))
+		if (event.getEntity().getWorld().getName().equalsIgnoreCase(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME)))
 			_nether.endNetherSession(event.getEntity());
 	}
 	
@@ -35,14 +37,14 @@ public class EvtHandler implements Listener
 	public void OnPlayerQuit(PlayerQuitEvent event)
 	{
 		//persists the player's used nether minutes if they logout while in nether
-		if (event.getPlayer().getWorld().getName().equals(Configuration.NETHER_SERVER_NAME))
+		if (event.getPlayer().getWorld().getName().equals(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME)))
 			_nether.logoutWhileInNether(event.getPlayer());
 	}
 	
 	@EventHandler
 	public void OnPlayerJoin(PlayerJoinEvent event)
 	{
-		if (event.getPlayer().getWorld().getName().equals(Configuration.NETHER_SERVER_NAME))
+		if (event.getPlayer().getWorld().getName().equals(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME)))
 		{
 			//punt them back to main world if they are out of time but somehow were still in nether.
 			//odds of this are very low.  Teleporting them on join also causes an error and forces
@@ -78,7 +80,7 @@ public class EvtHandler implements Listener
 			int rand = new Random().nextInt(100); 
 
 			//give a nugget if it is within the configured drop percent
-			if (rand < Configuration.PIGZOMBIE_GOLD_DROP_PERCENT) 
+			if (rand < _config.getPropertyInt(Configuration.Keys.PIGZOMBIE_GOLD_DROP_PERCENT)) 
 			{ //Give nugget  (yes, this will double up loot.. that's the downfall of not modifying the real loot table)
 				event.getDrops().add(new ItemStack(Material.GOLD_NUGGET));
 				_nether.getLogger().info(String.format("added nugget", rand));
