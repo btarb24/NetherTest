@@ -215,6 +215,10 @@ public class NetherTest extends JavaPlugin
 	private void deleteFolder(File file)
 	{ //recursively delete folder and files. (lame java doesn't have this built in.. or at least that i could find).
 
+		//sanity check
+		if (file == null)
+			return;
+		
 		//delete if we're down to a file
 		if (file.isFile())
 		{
