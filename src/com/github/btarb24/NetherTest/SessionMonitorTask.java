@@ -9,6 +9,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
+import com.github.btarb24.NetherTest.Configuration.Keys;
+
 public class SessionMonitorTask extends TimerTask
 {
 	
@@ -26,7 +28,7 @@ public class SessionMonitorTask extends TimerTask
 	public void run() 
 	{
 		//get the nether world
-		World world = Bukkit.getWorld(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME));
+		World world = Bukkit.getWorld(_config.getProperty(Keys.NETHER_SERVER_NAME));
 		
 		//sanity  (world may not be loaded yet if plugin just started)
 		if (world == null)
@@ -52,7 +54,7 @@ public class SessionMonitorTask extends TimerTask
 					player.teleport(Bukkit.getWorld("world").getSpawnLocation());
 					
 					//tell them why
-					player.sendMessage(String.format("You've used all your Nether minutes. You may re-enter in %s hours", _config.getProperty(Configuration.Keys.ENTRANCE_FREQUENCY)));					
+					player.sendMessage(String.format("You've used all your Nether minutes. You may re-enter in %s hours", _config.getProperty(Keys.ENTRANCE_FREQUENCY)));					
 				}
 			}
 			catch (SQLException e) 

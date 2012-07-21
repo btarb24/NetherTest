@@ -13,6 +13,8 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 
+import com.github.btarb24.NetherTest.Configuration.Keys;
+
 public class EvtHandler implements Listener
 {
 	NetherTest _nether;
@@ -29,7 +31,7 @@ public class EvtHandler implements Listener
 	{
 		//check if they were in the nether.  kill their session if they were. 
 		//they will respawn in main world and not be able to get back in nether
-		if (event.getEntity().getWorld().getName().equalsIgnoreCase(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME)))
+		if (event.getEntity().getWorld().getName().equalsIgnoreCase(_config.getProperty(Keys.NETHER_SERVER_NAME)))
 			_nether.endNetherSession(event.getEntity());
 	}
 	
@@ -37,14 +39,14 @@ public class EvtHandler implements Listener
 	public void OnPlayerQuit(PlayerQuitEvent event)
 	{
 		//persists the player's used nether minutes if they logout while in nether
-		if (event.getPlayer().getWorld().getName().equals(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME)))
+		if (event.getPlayer().getWorld().getName().equals(_config.getProperty(Keys.NETHER_SERVER_NAME)))
 			_nether.logoutWhileInNether(event.getPlayer());
 	}
 	
 	@EventHandler
 	public void OnPlayerJoin(PlayerJoinEvent event)
 	{
-		if (event.getPlayer().getWorld().getName().equals(_config.getProperty(Configuration.Keys.NETHER_SERVER_NAME)))
+		if (event.getPlayer().getWorld().getName().equals(_config.getProperty(Keys.NETHER_SERVER_NAME)))
 		{
 			//punt them back to main world if they are out of time but somehow were still in nether.
 			//odds of this are very low.  Teleporting them on join also causes an error and forces
@@ -77,7 +79,7 @@ public class EvtHandler implements Listener
 			}
 			
 			//get the drop percent from the config
-			int dropPercent = _config.getPropertyInt(Configuration.Keys.PIGZOMBIE_GOLD_DROP_PERCENT);
+			int dropPercent = _config.getPropertyInt(Keys.PIGZOMBIE_GOLD_DROP_PERCENT);
 
 			//see if they are to get any gold at all
 			if (dropPercent > 0)

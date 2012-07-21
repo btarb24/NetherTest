@@ -15,6 +15,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.github.btarb24.NetherTest.Configuration.Keys;
 import com.github.btarb24.NetherTest.cmds.NetherCommand;
 
 
@@ -53,7 +54,7 @@ public class NetherTest extends JavaPlugin
 				
 		//start the session monitor
 		_monitorTask = new SessionMonitorTask(getLogger(), _config);
-		_timer.schedule(_monitorTask, 0, _config.getPropertyLong(Configuration.Keys.MONITOR_INTERVAL)); 
+		_timer.schedule(_monitorTask, 0, _config.getPropertyLong(Keys.MONITOR_INTERVAL)); 
 		
 		getCommand("nether").setExecutor(new NetherCommand(this, _dbAccess, _config));
 		
@@ -75,7 +76,7 @@ public class NetherTest extends JavaPlugin
 		//max out their minutes in the db so they can't rejoin
 		_dbAccess.endNetherSession(player);
 		player.teleport(Bukkit.getWorld("world").getSpawnLocation()); //send them back to main world
-		player.sendMessage(String.format("You died in the Nether. You may not re-enter for another %d hours.", _config.getPropertyInt(Configuration.Keys.ENTRANCE_FREQUENCY)));
+		player.sendMessage(String.format("You died in the Nether. You may not re-enter for another %d hours.", _config.getPropertyInt(Keys.ENTRANCE_FREQUENCY)));
 	}
 	
 	public void logoutWhileInNether(Player player)
@@ -100,10 +101,10 @@ public class NetherTest extends JavaPlugin
 	public void resetNetherWorld(boolean override)
 	{
 		//this is where the nether world file lives
-		File worldFolder = new File(".\\" + _config.getProperty(Configuration.Keys.NETHER_SERVER_NAME));
+		File worldFolder = new File(".\\" + _config.getProperty(Keys.NETHER_SERVER_NAME));
 		
 		//load from the config file so we know how many days the world shoud last
-		int maxDays = _config.getPropertyInt(Configuration.Keys.DAYS_UNTIL_NETHER_RESET);
+		int maxDays = _config.getPropertyInt(Keys.DAYS_UNTIL_NETHER_RESET);
 		
 		//check if world reset is disabled
 		if (maxDays == 0)
@@ -114,7 +115,7 @@ public class NetherTest extends JavaPlugin
 		long currentDay = now.getTimeInMillis() / 86400000; 
 		
 		//load the last reset day from the config file
-		long lastResetDay = _config.getPropertyLong(Configuration.Keys.LAST_RESET_DAY);
+		long lastResetDay = _config.getPropertyLong(Keys.LAST_RESET_DAY);
 		
 		//do we need to reset again?
 		if (currentDay - lastResetDay >= maxDays || override)
@@ -123,7 +124,7 @@ public class NetherTest extends JavaPlugin
 			deleteFolder(worldFolder);
 			
 			//and save the new day into the config file
-			_config.setProperty(Configuration.Keys.LAST_RESET_DAY, String.format("%d", currentDay));
+			_config.setProperty(Keys.LAST_RESET_DAY, String.format("%d", currentDay));
 
 			//did it work?
 			getLogger().info(String.format("Nether world deletion successful: %b", worldFolder.exists()));
